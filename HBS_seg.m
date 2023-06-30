@@ -97,6 +97,8 @@ drawnow();
 
 % 1st time computation
 [map,mu,seg] = seg_main(static,unit_disk,face,vert,updated_map,hbs_mu,iteration);
+
+
 % Operator = meshOperator(vert,face);
 % map_mu = reshape(Operator.f2v*map_mu,m,n);
 

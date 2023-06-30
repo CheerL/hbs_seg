@@ -1,10 +1,10 @@
 function [ map, smooth_mu, seg ] = seg_main(static,unit_disk,face,vert,init_map, hbs_mu,iteration)
 %% Parameter settings
 u_times = 20;
-gaussian_params = [1,1];
+gaussian = [0,5];
 eta = 1;
-k1 = 0.5;
-k2 = 0.5;
+k1 = 0.1;
+k2 = 15;
 alpha = 1;  % similarity with mu_f 
 beta = 0;   % similarity with HBS
 delta = 0;    % grad of mu
@@ -20,7 +20,8 @@ warning('off','all')
 c1 = 1;
 c2 = 0;
 stopcount = 0;
-seg = Tools.move_pixels(unit_disk, vert, init_map) >= 0.5;
+seg = Tools.move_pixels(unit_disk, vert, init_map);
+inner_idx = unit_disk >= 0.5;
 op = Mesh.mesh_operator(face,vert);
 figure;
 
@@ -31,85 +32,30 @@ map = init_map;
 
 % iterations
 for k = 1:iteration
+    % Compute modified demon descent and update the registration function (mu-subproblem)
+    [temp_map,temp_seg] = compute_u(static,seg,vert,vert,op,u_times,gaussian,eta,k1,k2,c1,c2);
+    Fx = scatteredInterpolant(vert,temp_map(:,1));
+    Fy = scatteredInterpolant(vert,temp_map(:,2));
+    temp_map = [Fx(map),Fy(map)];
+    % temp_seg = Tools.move_pixels(unit_disk,vert,temp_map);
+    % [u,map,seg] = compute_u(static,moving,vert,map,op,times,gaussian,eta,k1,k2,c1,c2);
 
-    % Update the moving image
+    temp_mu = bc_metric(face,vert,temp_map,2);
+    temp_mu = Tools.mu_chop(temp_mu,upper_bound);
+    smooth_mu = smoothing(temp_mu,hbs_mu,op,alpha,beta,lambda,delta);
+    smooth_mu = Tools.mu_chop(smooth_mu,upper_bound);
+    map = lsqc_solver(face,vert,smooth_mu,landmark,temp_map(landmark,:));
+    seg = Tools.move_pixels(unit_disk,vert,map);
+
     c1_old = c1;
     c2_old = c2;
+
     mid = (c1+c2)/2;
-
-    % Compute modified demon descent and update the registration function (mu-subproblem)
-
-    % [M,Tx,Ty] = simple_demon(seg,static,demon_iteration,gaussian_size,method,sigma,eta_inside,eta_outside);
-    local_moving = seg;
-    local_map = vert;
-
-    for i=1:u_times
-        [ux,uy] = solve_u(static,local_moving,op,eta,k1,k2);
-        ux(isnan(ux))=0;
-        uy(isnan(uy))=0;
-        ux = reshape(ux,[m,n]);
-        uy = reshape(uy,[m,n]);
-        if gaussian_params(1) > 0
-            uxs = gaussian_params(2)*imgaussfilt(ux, gaussian_params(1));
-            uys = gaussian_params(2)*imgaussfilt(uy, gaussian_params(1));
-        else
-            uxs = gaussian_params(2) * ux;
-            uys = gaussian_params(2) * uy;
-        end
-
-        Fx = scatteredInterpolant(vert,uxs(:));
-        Fy = scatteredInterpolant(vert,uys(:));
-        uxs = Fx(local_map);
-        uys = Fy(local_map);
-        local_map = local_map + [uxs,uys];
-        local_moving = Tools.move_pixels(local_moving, vert, local_map);
-        local_moving = c1*(local_moving>=mid)+c2*(local_moving<mid);
-
-        u = [Fx(map),Fy(map)];
-        map = map + u;
-        temp_seg = Tools.move_pixels(unit_disk, vert, map);
-        temp_seg = c1*(temp_seg>=mid)+c2*(temp_seg<mid);
-        
-        subplot(1,2,1);
-        imshow(local_moving);
-        subplot(1,2,2);
-        imshow(temp_seg);
-        drawnow;
-        % local_moving = temp_seg;
-        % Tx = Tx+uxs;
-        % Ty = Ty+uys;
-        % moving = movepixels(init_moving,-Ty,-Tx);
-    end
-    % [~,map,temp_seg] = compute_u(static,seg,vert,map,op,u_times,gaussian_params,eta,k1,k2);
-    % Fx = scatteredInterpolant(vert,ux(:));
-    % Fy = scatteredInterpolant(vert,uy(:));
-    % ux = Fx(map);
-    % uy = Fy(map);
-    % map = map(:,1:2) + [ux,uy];
-    % temp_seg = Tools.move_pixels(unit_disk, vert, map);
-    temp_mu = bc_metric(face,vert,map,2);
-
-    % Smoothens the Beltrami coefficient (nu-subproblem)
-    % delta = delta + sigmaIncrease;
-    smooth_mu = Tools.mu_chop(temp_mu,upper_bound);
-    smooth_mu = smoothing(smooth_mu,hbs_mu,op,alpha,beta,lambda,delta);
-    smooth_mu = Tools.mu_chop(smooth_mu,upper_bound);
-    map = lsqc_solver(face,vert,smooth_mu,landmark,map(landmark,:));
-
-    % Update the template image
-    seg = Tools.move_pixels(unit_disk, vert, map);
-
-    % % Rebuild original template image
-    % Bheight = (reshape(-inverse_vector(:,2),size(static)));
-    % Bwidth  = (reshape(-inverse_vector(:,1),size(static)));
-    % ori_moving = movepixels(temp_moving,Bheight,Bwidth);
-
-    % Update c_1, c_2
-    object = seg >= mid;
-    background = seg < mid;
-    c1 = mean(static(object), "all");
-    c2 = mean(static(background), "all");
-    seg = c1*object + c2*background;
+    tg = seg >= mid;
+    bg = seg < mid;
+    c1 = mean(static(tg));
+    c2 = mean(static(bg));
+    seg = c1*tg + c2*bg;
 
     if ((abs(c1-c1_old)<5e-4)&&(abs(c2-c2_old)<5e-4))
         stopcount = stopcount + 1;
@@ -124,9 +70,12 @@ for k = 1:iteration
         % subplot(1,4,1);
         % imshow(M);
         subplot(1,3,1);
-        imshow(temp_seg > 0.5);
+        imshow(temp_seg);
         subplot(1,3,2);
         imshow(seg);
+        hold on;
+        Plot.pri_scatter(map(inner_idx,:)+[1,1]);
+        hold off;
         xlabel(info);
         subplot(1,3,3);
         imshow(abs(static-seg));

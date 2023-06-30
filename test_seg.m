@@ -10,12 +10,16 @@ c2 = 0.0;
 upper_bound = 0.9999;
 
 static = Mesh.imread('img/hbs_seg/img1.png');
-moving = Mesh.imread('img/hbs_seg/tp1.png');
 static = imresize(static, [256*k,256*k]);
-moving = imresize(moving, [256*k,256*k]);
+
+% moving = Mesh.imread('img/hbs_seg/tp1.png');
+% moving = imresize(moving, [256*k,256*k]);
+load('mv.mat');
+moving = mv;
+
 static = c1*(static >= 0.5);
 moving = c1*(moving >= 0.5);
-
+% HBS_seg(static,moving);
 
 [m,n] = size(static);
 [face,vert] = Mesh.rect_mesh(m,n,0);
@@ -23,9 +27,6 @@ op = Mesh.mesh_operator(face,vert);
 outer_boundary_idx = any([vert(:, 1)==0, vert(:, 1) == (n-1), vert(:,2) == 0, vert(:,2)== (m-1)], 2);
 landmark = find(outer_boundary_idx);
 idx = moving>=0.5;
-
-
-
 
 iteration = 200;
 times = 20;
@@ -38,22 +39,24 @@ delta = 0.0;    % grad of mu
 lambda = 0.1;       % abs of mu
 gaussian = [0,5];
 
-% best_map = vert;
-% best_loss = 1e10;
-% best_i = 0;
-% temp_moving = moving;
-% map = vert;
-best_moving = Tools.move_pixels(moving, vert, best_map);
-map = best_map;
-temp_moving = best_moving >= 0.5;
-c1 = mean(static(temp_moving));
-c2 = mean(static(~temp_moving));
-mid = (c1+c2)/2;
-temp_moving = c1*(best_moving>=mid)+c2*(best_moving<mid);
-
+if exist('best_i', 'var')
+    map = best_map;
+    temp_moving = best_moving >= 0.5;   
+    c1 = mean(static(temp_moving));
+    c2 = mean(static(~temp_moving));
+    mid = (c1+c2)/2;
+    temp_moving = c1*(best_moving>=mid)+c2*(best_moving<mid);
+else
+    best_map = vert;
+    best_loss = 1e10;
+    best_i = 0;
+    best_moving = moving;
+    temp_moving = moving;
+    map = vert;
+end
 
 for i=1:iteration
-    [u,seg_vert,seg] = compute_u(static,temp_moving,vert,vert,op,times,gaussian,eta,k1,k2,c1,c2);
+    [seg_vert,seg] = compute_u(static,temp_moving,vert,vert,op,times,gaussian,eta,k1,k2,c1,c2);
     Fx = scatteredInterpolant(vert,seg_vert(:,1));
     Fy = scatteredInterpolant(vert,seg_vert(:,2));
     map = [Fx(map),Fy(map)];
@@ -99,6 +102,7 @@ for i=1:iteration
     loss = norm(static-temp_moving, 'fro');
     fprintf('%d %f %f %f\n', i, c1, c2, loss);
     if loss < best_loss
+        best_moving = temp_moving;
         best_loss = loss;
         best_map = map;
         best_i = i;
