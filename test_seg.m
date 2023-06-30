@@ -22,21 +22,33 @@ moving = c1*(moving >= 0.5);
 op = Mesh.mesh_operator(face,vert);
 outer_boundary_idx = any([vert(:, 1)==0, vert(:, 1) == (n-1), vert(:,2) == 0, vert(:,2)== (m-1)], 2);
 landmark = find(outer_boundary_idx);
-temp_moving = moving;
 idx = moving>=0.5;
-map = vert;
+
+
 
 
 iteration = 200;
 times = 20;
 eta = 1;
-k1 = 0.01;
-k2 = 10;
+k1 = 0.05;
+k2 = 15;
 alpha = 1;  % similarity with mu_f 
 beta = 0;   % similarity with HBS
 delta = 0.0;    % grad of mu
-lambda = 0.0;       % abs of mu
-gaussian = [0,3];
+lambda = 0.1;       % abs of mu
+gaussian = [0,5];
+
+best_map = vert;
+best_loss = 1e10;
+best_i = 0;
+temp_moving = moving;
+map = vert;
+% map = best_map;
+% temp_moving = best_moving >= 0.5;
+% c1 = mean(static(temp_moving));
+% c2 = mean(static(~temp_moving));
+% mid = (c1+c2)/2;
+% temp_moving = c1*(best_moving>=mid)+c2*(best_moving<mid);
 
 
 for i=1:iteration
@@ -73,7 +85,7 @@ for i=1:iteration
     subplot(2,2,3);
     hold on;
     imshow(temp_moving);
-    Plot.pri_scatter(map(idx,:));
+    Plot.pri_scatter(map(idx,:)+[1,1]);
     hold off;
     subplot(2,2,4);
 %     hold on;
@@ -81,6 +93,12 @@ for i=1:iteration
 %     Plot.pri_scatter(map(idx,:));
 %     hold off;
     drawnow;
+    loss = norm(static-temp_moving, 'fro');
+    fprintf('%d %f %f %f\n', i, c1, c2, loss);
+    if loss < best_loss
+        best_loss = loss;
+        best_map = map;
+        best_i = i;
+    end
 
-    fprintf('%d %f %f\n', i, c1, c2);
 end

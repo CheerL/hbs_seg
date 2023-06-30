@@ -2,35 +2,63 @@ addpath('./dependencies');
 addpath('./dependencies/im2mesh');
 addpath('./dependencies/mfile');
 addpath('./dependencies/aco-v1.1/aco');
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-boundary_point_num = 200;
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+close all;
 
-m = 10; n = 10;
-num = m*n;
-Ix = rand(m,n);
-Iy = rand(m,n);
-ux = rand(m,n);
-uy = rand(m,n);
-a = 2;
+k=1;
+c1 = 1.0;
+c2 = 0.0;
+upper_bound = 0.9999;
 
-[f,v] = Mesh.rect_mesh(m,n);
-op = Mesh.mesh_operator(f,v);
+static = Mesh.imread('img/hbs_seg/img1.png');
+moving = Mesh.imread('img/hbs_seg/tp1.png');
+static = imresize(static, [256*k,256*k]);
+moving = imresize(moving, [256*k,256*k]);
+static = c1*(static >= 0.5);
+moving = c1*(moving >= 0.5);
 
-L = op.laplacian;
 
-s = Ix(:).*Ix(:).*ux(:) + Ix(:).*Iy(:).*uy(:) + a*ux(:) - a*L*ux(:);
-t = Ix(:).*Iy(:).*ux(:) + Iy(:).*Iy(:).*uy(:) + a*uy(:) - a*L*uy(:);
+[m,n] = size(static);
+bound_point_num = 500;
+circle_point_num = 1000;
+hbs_mesh_density = 50;
+smooth_eps = 0;
+iteration = 500;
+mu_upper_bound = 0.9999;
+mesh_density = min([m,n]/4);
+bound = Mesh.get_bound(moving, bound_point_num);
 
-E = speye(num);
-Rx3 = (E.*(Ix(:).*Ix(:)+a)-a*L)*ux(:)+E.*(Ix(:).*Iy(:))*uy(:);
-Ry3 = (E.*(Iy(:).*Iy(:)+a)-a*L)*uy(:)+E.*(Ix(:).*Iy(:))*ux(:);
-A = E.*(Ix(:).*Ix(:)+a)-a*L;
-B = E.*(Ix(:).*Iy(:));
-C = E.*(Ix(:).*Iy(:));
-D = E.*(Iy(:).*Iy(:)+a)-a*L;
+%% Compute HBS and initial map
+[face, vert] = Mesh.rect_mesh(m, n, 0);
+normal_vert = (vert - ([n, m]-1)/2) ./ mesh_density;
 
-y = (D-C/A*B) \ (t - C/A*s);
-x = (A-B/D*C) \ (s - B/D*t);
+[hbs, ~, ~, ~, disk_face, disk_vert, ~] = HBS(bound, circle_point_num, hbs_mesh_density);
+[reconstructed_bound, inner, outer, extend_vert, extend_face] = HBS_reconstruct(hbs, disk_face, disk_vert, m, n, mesh_density);
+extend_map = Tools.complex2real([reconstructed_bound;inner;outer]);
 
-r = solveAXB_SP([A,B;C,D],[s;t]);
+interp_map_x = scatteredInterpolant(extend_vert,extend_map(:, 1));
+interp_map_y = scatteredInterpolant(extend_vert,extend_map(:, 2));
+normal_map = [interp_map_x(normal_vert),interp_map_y(normal_vert)];
+hbs_mu = bc_metric(face, normal_vert, normal_map, 2);
+hbs_mu = Tools.mu_chop(hbs_mu, mu_upper_bound);
+
+unit_disk = zeros(m, n);
+unit_disk(Tools.norm(normal_vert)<=(1+smooth_eps)) = 1;
+
+map = normal_map .* mesh_density + ([n, m]-1)/2;
+reconstructed_bound = Tools.complex2real(reconstructed_bound) .* mesh_density + ([n, m]-1)/2;
+init_moving = Tools.move_pixels(unit_disk, normal_vert, normal_map);
+
+% Display init_moving, map and mu
+figure;
+sp1 = subplot(1,3,1);
+imshow(init_moving)
+hold on;
+Plot.pri_scatter(reconstructed_bound);
+% plot(real(reconstructed_bound), imag(reconstructed_bound), 'g','LineWidth',1);
+subplot(1,3,2);
+Plot.pri_plot_mesh(face, map);
+subplot(1,3,3);
+Plot.pri_plot_mu(hbs_mu, face, vert);
+colormap(sp1, "gray");
+set(gcf,'unit','normalized','position',[0 0 1 1])
+drawnow();

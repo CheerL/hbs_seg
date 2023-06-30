@@ -46,23 +46,14 @@ normal_vert = (vert - [n/2, m/2]) ./ mesh_density;
 [reconstructed_bound, inner, outer, extend_vert, ~] = HBS_reconstruct(hbs, disk_face, disk_vert, m, n, mesh_density);
 extend_map = Tools.complex2real([reconstructed_bound;inner;outer]);
 
-interp_map_x = scatteredInterpolant(extend_vert(:,1),extend_vert(:,2),extend_map(:, 1));
-interp_map_y = scatteredInterpolant(extend_vert(:,1),extend_vert(:,2),extend_map(:, 2));
-normal_map = [
-    interp_map_x(normal_vert(:,1),normal_vert(:,2)), ...
-    interp_map_y(normal_vert(:,1),normal_vert(:,2))];
+interp_map_x = scatteredInterpolant(extend_vert,extend_map(:, 1));
+interp_map_y = scatteredInterpolant(extend_vert,extend_map(:, 2));
+normal_map = [interp_map_x(normal_vert),interp_map_y(normal_vert)];
 hbs_mu = bc_metric(face, normal_vert, normal_map, 2);
 hbs_mu = Tools.mu_chop(hbs_mu, mu_upper_bound);
 
 unit_disk = zeros(m, n);
 unit_disk(Tools.norm(normal_vert)<=(1+smooth_eps)) = 1;
-% for i=1:256
-%     for j=1:256
-%         if i==35 || j==35
-%             unit_disk(i, j) = 1;
-%         end
-%     end
-% end
 
 map = normal_map .* mesh_density + [n, m]/2;
 reconstructed_bound = Tools.complex2real(reconstructed_bound) .* mesh_density + [n,m]/2;
