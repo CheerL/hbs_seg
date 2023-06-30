@@ -38,24 +38,27 @@ delta = 0.0;    % grad of mu
 lambda = 0.1;       % abs of mu
 gaussian = [0,5];
 
-best_map = vert;
-best_loss = 1e10;
-best_i = 0;
-temp_moving = moving;
-map = vert;
-% map = best_map;
-% temp_moving = best_moving >= 0.5;
-% c1 = mean(static(temp_moving));
-% c2 = mean(static(~temp_moving));
-% mid = (c1+c2)/2;
-% temp_moving = c1*(best_moving>=mid)+c2*(best_moving<mid);
+% best_map = vert;
+% best_loss = 1e10;
+% best_i = 0;
+% temp_moving = moving;
+% map = vert;
+best_moving = Tools.move_pixels(moving, vert, best_map);
+map = best_map;
+temp_moving = best_moving >= 0.5;
+c1 = mean(static(temp_moving));
+c2 = mean(static(~temp_moving));
+mid = (c1+c2)/2;
+temp_moving = c1*(best_moving>=mid)+c2*(best_moving<mid);
 
 
 for i=1:iteration
-    [u,seg_vert,seg] = compute_u(static,temp_moving,vert,op,times,gaussian,eta,k1,k2);
+    [u,seg_vert,seg] = compute_u(static,temp_moving,vert,vert,op,times,gaussian,eta,k1,k2,c1,c2);
     Fx = scatteredInterpolant(vert,seg_vert(:,1));
     Fy = scatteredInterpolant(vert,seg_vert(:,2));
     map = [Fx(map),Fy(map)];
+%     [u,map,seg] = compute_u(static,moving,vert,map,op,times,gaussian,eta,k1,k2,c1,c2);
+    
     
     temp_mu = bc_metric(face,vert,map,2);
     temp_mu = Tools.mu_chop(temp_mu,upper_bound);

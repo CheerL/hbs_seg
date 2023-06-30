@@ -24,11 +24,11 @@ hbs_mesh_density = 50;
 smooth_eps = 0;
 iteration = 500;
 mu_upper_bound = 0.9999;
-mesh_density = min([m,n]/4);
 bound = Mesh.get_bound(moving, bound_point_num);
 
 %% Compute HBS and initial map
 [face, vert] = Mesh.rect_mesh(m, n, 0);
+mesh_density = min([m,n]/4);
 normal_vert = (vert - ([n, m]-1)/2) ./ mesh_density;
 
 [hbs, ~, ~, ~, disk_face, disk_vert, ~] = HBS(bound, circle_point_num, hbs_mesh_density);
