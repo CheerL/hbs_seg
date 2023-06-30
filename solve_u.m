@@ -10,10 +10,8 @@ Jx = Jx(:); Jy = Jy(:);
 E = speye(num);
 diff = J(:)-I(:);
 
-A_diag = (Ix.^2+Iy.^2);
 % A = eta*E.*A_diag;
-A = spdiags(eta*A_diag,0,num,num);
-A = A + k1*E-k2*Op.laplacian;
+A = spdiags(eta*(Ix.^2+Iy.^2),0,num,num) + k1*E-k2*Op.laplacian;
 % B = eta*E.*Ixy;
 % C = B;
 % D = eta*E.*Iyy + k1*E-k2*Op.laplacian;

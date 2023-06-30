@@ -3,8 +3,8 @@ function [ map, smooth_mu, seg ] = seg_main(static,unit_disk,face,vert,init_map,
 u_times = 20;
 gaussian = [0,5];
 eta = 1;
-k1 = 0.1;
-k2 = 15;
+k1 = 0.05;
+k2 = 10;
 alpha = 1;  % similarity with mu_f 
 beta = 0;   % similarity with HBS
 delta = 0;    % grad of mu
@@ -17,19 +17,23 @@ upper_bound = 0.9999;
 
 % Initialize parameters
 warning('off','all')
-c1 = 1;
-c2 = 0;
 stopcount = 0;
-seg = Tools.move_pixels(unit_disk, vert, init_map);
-inner_idx = unit_disk >= 0.5;
-op = Mesh.mesh_operator(face,vert);
-figure;
-
+mid = 0.5;
 [m, n] = size(static);
+
+op = Mesh.mesh_operator(face,vert);
+inner_idx = unit_disk >= 0.5;
 outer_boundary_idx = any([vert(:, 1)==0, vert(:, 1) == (n-1), vert(:,2) == 0, vert(:,2)== (m-1)], 2);
 landmark = find(outer_boundary_idx);
-map = init_map;
 
+map = init_map;
+seg = Tools.move_pixels(unit_disk, vert, init_map);
+c1 = mean(static(seg>=mid));
+c2 = mean(static(seg<mid));
+seg = c1*(seg>=mid)+c2*(seg<mid);
+
+
+figure;
 % iterations
 for k = 1:iteration
     % Compute modified demon descent and update the registration function (mu-subproblem)
@@ -65,8 +69,8 @@ for k = 1:iteration
 
     % Display intermediate results
     if mod(k,1)==0
-        info = sprintf('Interation %i. C1: %f -(%f)-> %f, C2: %f -(%f)-> %f, stopcount %i',...
-            k,c1_old,c1-c1_old,c1,c2_old,c2-c2_old,c2,stopcount);
+        info = sprintf('Interation %i. C1: %f -(%f)-> %f, C2: %f -(%f)-> %f, loss: %f, stopcount %i',...
+            k,c1_old,c1-c1_old,c1,c2_old,c2-c2_old,c2,norm(static-seg, 'fro'), stopcount);
         % subplot(1,4,1);
         % imshow(M);
         subplot(1,3,1);
