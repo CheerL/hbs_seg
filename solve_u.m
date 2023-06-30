@@ -10,7 +10,10 @@ Jx = Jx(:); Jy = Jy(:);
 E = speye(num);
 diff = J(:)-I(:);
 
-A = eta*E.*(Ix.^2+Iy.^2) + k1*E-k2*Op.laplacian;
+A_diag = (Ix.^2+Iy.^2);
+% A = eta*E.*A_diag;
+A = spdiags(eta*A_diag,0,num,num);
+A = A + k1*E-k2*Op.laplacian;
 % B = eta*E.*Ixy;
 % C = B;
 % D = eta*E.*Iyy + k1*E-k2*Op.laplacian;
@@ -41,7 +44,7 @@ end
 % 
 % [Ix,Iy] = gradient(I);
 % [Jx,Jy] = gradient(J);
-% [IJx,IJy] = gradient(I.*J);
+% % [IJx,IJy] = gradient(I.*J);
 % 
 % Ix = Ix(:); Iy = Iy(:);
 % Jx = Jx(:); Jy = Jy(:);
@@ -53,10 +56,10 @@ end
 % E = speye(num);
 % diff = J(:)-I(:);
 % 
-% A = eta*E.*Ixx + k1*E-k2*Op.laplacian;
-% B = eta*E.*Ixy;
+% A = spdiags(eta*Ixx,0,num,num) + k1*E-k2*Op.laplacian;
+% B = spdiags(eta*Ixy,0,num,num);
 % C = B;
-% D = eta*E.*Iyy + k1*E-k2*Op.laplacian;
+% D = spdiags(eta*Iyy,0,num,num) + k1*E-k2*Op.laplacian;
 % % B_inv = E.*Ixy_inv / eta;
 % % C_inv = B_inv;
 % 
