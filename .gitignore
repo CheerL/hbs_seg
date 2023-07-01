@@ -1,2 +1,4 @@
 *.tif
 *.asv
+.python-version
+*.ipynb_checkpoints
