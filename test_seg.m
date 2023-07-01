@@ -2,6 +2,7 @@ addpath('./dependencies');
 addpath('./dependencies/im2mesh');
 addpath('./dependencies/mfile');
 addpath('./dependencies/aco-v1.1/aco');
+addpath('./dependencies/map/map');
 close all;
 
 k=1;
