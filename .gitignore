@@ -2,3 +2,4 @@
 *.asv
 .python-version
 *.ipynb_checkpoints
+**/output/*.png
