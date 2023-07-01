@@ -1,0 +1,5 @@
+{
+    "matlab-formatter.formatterPath": "/usr/local/MATLAB/R2020a/bin/glnxa64/mlint",
+    "matlab-formatter.pythonPath": "/home/extradisk/linchenran/.pyenv/versions/matlab/bin/python",
+    "matlab-interactive-terminal.pythonPath": "/home/extradisk/linchenran/.pyenv/versions/matlab/bin/python"
+}
