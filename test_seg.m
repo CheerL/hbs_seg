@@ -16,18 +16,17 @@ op = Mesh.mesh_operator(face,vert);
 outer_boundary_idx = any([vert(:, 1)==0, vert(:, 1) == (n-1), vert(:,2) == 0, vert(:,2)== (m-1)], 2);
 landmark = find(outer_boundary_idx);
 
-% moving = Mesh.imread('img/hbs_seg/tp1.png');  
-% moving = imresize(moving, [256*k,256*k]);
+moving = Mesh.imread('img/hbs_seg/tp1.png');  
+moving = imresize(moving, [256*k,256*k]);
 % init_map = vert;
-load('mv.mat');
-moving = unit_disk;
+% load('mv.mat');
+% moving = unit_disk;
 static = double(static >= 0.5);
 moving = double(moving >= 0.5);
-idx = find(moving>=0.5);
 
-% HBS_seg(static,moving);
+HBS_seg(static,moving);
 
-seg_main(static,moving,face,vert,init_map,0,200);
+% seg_main(static,moving,face,vert,init_map,0,200);
 % iteration = 200;
 % times = 20;
 % eta = 1;

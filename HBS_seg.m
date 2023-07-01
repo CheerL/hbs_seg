@@ -23,21 +23,9 @@ iteration = 500;
 mu_upper_bound = 0.9999;
 mesh_density = min([m,n]/4);
 
-%% Compute moving boundary and display
+%% Compute HBS and initial map
 bound = Mesh.get_bound(moving, bound_point_num);
 
-% Display static and moving boundary
-figure();
-imshow(static)
-hold on
-% contour(moving,[0,1],'g','LineWidth',2);
-Plot.pri_scatter(bound);
-plot(real(bound), imag(bound), 'g','LineWidth',1);
-set(gcf,'unit','normalized','position',[0 0 1 1])
-xlabel('Initial boundary of the template image superimposed on the given image')
-drawnow();
-
-%% Compute HBS and initial map
 [face, vert] = Mesh.rect_mesh(m, n, 0);
 normal_vert = (vert - [n/2, m/2]) ./ mesh_density;
 
@@ -62,15 +50,25 @@ init_moving = Tools.move_pixels(unit_disk, vert, map) >= 0.5;
 % Display init_moving, map and mu
 figure;
 sp1 = subplot(1,3,1);
+imshow(static)
+hold on;
+% contour(moving,[0,1],'g','LineWidth',2);
+Plot.pri_scatter(bound);
+plot(real(bound), imag(bound), 'g','LineWidth',1);
+hold off;
+
+sp2 = subplot(1,3,2);
 imshow(init_moving)
 hold on;
 Plot.pri_scatter(reconstructed_bound);
 plot(real(reconstructed_bound), imag(reconstructed_bound), 'g','LineWidth',1);
-subplot(1,3,2);
-Plot.pri_plot_mesh(face, map);
+% Plot.pri_plot_mesh(face, map);
+hold off;
+
 subplot(1,3,3);
 Plot.pri_plot_mu(hbs_mu, face, vert);
 colormap(sp1, "gray");
+colormap(sp2, "gray");
 set(gcf,'unit','normalized','position',[0 0 1 1])
 drawnow();
 
@@ -82,22 +80,21 @@ rotation_matrix = [cos(rotation),sin(rotation);-sin(rotation),cos(rotation)];
 updated_map = (map-[n,m]/2)*rotation_matrix*scaling+[a,b]*max(m,n)/2+[n,m]/2;
 updated_moving = Tools.move_pixels(unit_disk, vert, updated_map) >= 0.5;
 
-figure;
-subplot(1,3,1)
-imshow(static);
-subplot(1,3,2);
-imshow(updated_moving);
-subplot(1,3,3);
-imshow(abs(static - updated_moving));
-set(gcf,'unit','normalized','position',[0 0 1 1])
-drawnow();
+% figure;
+% subplot(1,3,1)
+% imshow(static);
+% subplot(1,3,2);
+% imshow(updated_moving);
+% subplot(1,3,3);
+% imshow(abs(static - updated_moving));
+% set(gcf,'unit','normalized','position',[0 0 1 1])
+% drawnow();
 
 
 %% Compute the object boundary (Main Program)
 
 % 1st time computation
 [map,mu,seg] = seg_main(static,unit_disk,face,vert,updated_map,hbs_mu,iteration);
-
 
 % Operator = meshOperator(vert,face);
 % map_mu = reshape(Operator.f2v*map_mu,m,n);
