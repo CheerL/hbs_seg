@@ -1,24 +1,18 @@
-function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_map, hbs_mu, iteration, seg_display)
-
-    if nargin < 8
-        seg_display = '';
-    end
-
-    if nargin < 7
-        iteration = 100;
-    end
+function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_map, hbs_mu, P)
 
     %% Parameter settings
-    u_times = 20;
-    gaussian = [0, 5];
-    eta = 1;
-    k1 = 0.01;
-    k2 = 100;
-    alpha = 1; % similarity with mu_f
-    beta = 0; % similarity with HBS
-    delta = 0; % grad of mu
-    lambda = 0.1; % abs of mu
-    upper_bound = 0.9999;
+    seg_display = P.seg_display; %'';
+    iteration = P.iteration; %100;
+    u_times = P.u_times; %20;
+    gaussian = P.gaussian; %[0, 5];
+    eta = P.eta; %1;
+    k1 = P.k1; %0.01;
+    k2 = P.k2; %100;
+    alpha = P.alpha; %1; % similarity with mu_f
+    beta = P.beta; %0; % similarity with HBS
+    delta = P.delta; %0; % grad of mu
+    lambda = P.lambda; %0.1; % abs of mu
+    upper_bound = P.upper_bound; %0.9999;
     % sigma = 1; % mu + grad mu (sigma)
     % sigmaIncrease = 2; % Increase sigma within the process
 
@@ -97,6 +91,7 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
         end
 
         if mod(k, 1) == 0
+
             if seg_display ~= "none"
                 % subplot(1,4,1);
                 % imshow(M);
@@ -139,6 +134,7 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                     seg_path = replace(seg_display, '.png', ['_final.png']);
                     saveas(gcf, seg_path);
                 end
+
             end
 
             break

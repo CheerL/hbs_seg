@@ -1,4 +1,4 @@
-function [map, mu, seg, moving] = HBS_seg(static, moving)
+function [map, mu, seg, moving] = HBS_seg(static, moving, P)
     %
     %
     % This program computes the segmentation of an input image based on the QC model.
@@ -15,17 +15,17 @@ function [map, mu, seg, moving] = HBS_seg(static, moving)
 
     %% Initializations
     [m, n] = size(static);
-    bound_point_num = 500;
-    circle_point_num = 1000;
-    hbs_mesh_density = 50;
-    smooth_eps = 0;
-    iteration = 500;
-    mu_upper_bound = 0.9999;
-    mesh_density = min([m, n] / 4);
+    bound_point_num = P.bound_point_num;%500;
+    circle_point_num = P.circle_point_num;%1000;
+    hbs_mesh_density = P.hbs_mesh_density;%50;
+    smooth_eps = P.smooth_eps;%0;
+    mu_upper_bound = P.upper_bound;
+    
 
-    init_image_display = "none";
-    recounstruced_bound_display = "none";
-    seg_display = "img/hbs_seg/output/seg_display.png";
+    init_image_display = P.init_image_display; %"img/hbs_seg/output/init.png";
+    recounstruced_bound_display = P.recounstruced_bound_display; %"img/hbs_seg/output/reconstructed.png";
+    % seg_display = "img/hbs_seg/output/seg_display.png";
+    mesh_density = min([m, n] / 4);
 
     %% Compute HBS and initial map
     bound = Mesh.get_bound(moving, bound_point_num);
@@ -83,9 +83,11 @@ function [map, mu, seg, moving] = HBS_seg(static, moving)
     end
 
     %% Transform initial moving
-    params = [1.491131e+00 6.309427e+00 2.828952e-03 1.312800e-02];
-    [scaling, rotation, a, b] = get_transformation_params(static, init_moving, params);
-    % [scaling, rotation, a, b] = get_transformation_params(static, init_moving);
+    if isempty(P.T_params)
+        [scaling, rotation, a, b] = get_transformation_params(static, init_moving);
+    else
+        [scaling, rotation, a, b] = get_transformation_params(static, init_moving, P.T_params);
+    end
     rotation_matrix = [cos(rotation), sin(rotation); -sin(rotation), cos(rotation)];
     updated_map = (map - [n, m] / 2) * rotation_matrix * scaling + [a, b] * max(m, n) / 2 + [n, m] / 2;
     updated_moving = Tools.move_pixels(unit_disk, vert, updated_map) >= 0.5;
@@ -110,60 +112,7 @@ function [map, mu, seg, moving] = HBS_seg(static, moving)
     %% Compute the object boundary (Main Program)
 
     % 1st time computation
-    [map, mu, seg] = seg_main(static, unit_disk, face, vert, updated_map, hbs_mu, iteration, seg_display);
-
-    % Operator = meshOperator(vert,face);
-    % map_mu = reshape(Operator.f2v*map_mu,m,n);
-
-    % Re-initialize the algorithm if required
-    % if regrid
-    %     u = reshape(map(:,1),size(static));
-    %     v = reshape(map(:,2),size(static));
-    %     for ii = 1:regrid
-    %         pause(0.01)
-    %         figure
-    %         [ux,uy] = gradient(u); [vx,vy] = gradient(v);
-    %         tau = ((ux+vy)-1i*(vx-uy))./((ux+vy)+1i*(vx-uy));
-    %         map_mu_p = map_mu;
-    %         for kk = 1:numel(boundary_ind)
-    %             [~,boundary_ind{kk}] = ismember(round(map(boundary_ind{kk},1:2)),vertex(:,1:2),'rows');
-    %         end
-    %         [map,map_mu,reg] = registration_v2(reg,static,10);
-    %         map_mu = Operator.f2v*map_mu;
-    %         mu_comp_f = interp2(reshape(vertex(:,1),size(static)),reshape(vertex(:,2),size(static)),reshape(map_mu,size(static)),u,v);
-    %         mu_comp_f = reshape(mu_comp_f,size(tau));
-    %         map_mu = (map_mu_p+mu_comp_f.*tau)./(ones(size(tau))+conj(map_mu_p).*mu_comp_f.*tau);
-    %         u = scatteredInterpolant(u(:),v(:),map(:,1)); u = reshape(u.Values,size(static));
-    %         v = scatteredInterpolant(u(:),v(:),map(:,2)); v = reshape(v.Values,size(static));
-    %     end
-    %     map = [u(:),v(:)];
-    % end
-
-    %% Display final output
-
-    % % Plot the grid
-    % figure
-    % [x,y] = meshgrid(0:size(static,1)-1,0:size(static,2)-1);
-    % f = delaunay(x,y);
-    % mesh = makeMesh([map(:,1),-map(:,2)],f);
-    % plotMesh(mesh)
-    % set(gcf,'units','normalized','outerposition',[0 0.15 1 0.85])
-
-    % Plot the image
-    % figure
-    % reg(reg>=0.2)=1;
-    % reg(reg<0.2)=0;
-    % showphi(static,reg,'end')
-    % imshow(static)
-    % hold on
-    % for ii = 1:numel(boundary_ind)
-    %     boundary_ind{ii} = [boundary_ind{ii};boundary_ind{ii}(1,:)];
-    % end
-    % plot(map(boundary_ind{1},1),map(boundary_ind{1},2),'g','LineWidth',2)
-    % contour(reg,[min(reg, [], [1,2]),max(reg, [], [1,2])],'g','LineWidth',2);
-    % set(gcf,'units','normalized','outerposition',[0 0.15 1 0.85])
-    % xlabel('Final segmentation result')
-    %%
+    [map, mu, seg] = seg_main(static, unit_disk, face, vert, updated_map, hbs_mu, P);
 end
 
 function [scaling, rotation, a, b] = get_transformation_params(static, moving, params)
