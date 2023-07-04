@@ -2,5 +2,6 @@
 *.asv
 .python-version
 *.ipynb_checkpoints
-**/output/*.png
+**/output/**/*.png
 .vscode
+run_instance_*.m

@@ -1,11 +1,15 @@
 classdef Mesh
-    %MESH ´Ë´¦ÏÔÊ¾ÓĞ¹Ø´ËÀàµÄÕªÒª
-    %   ´Ë´¦ÏÔÊ¾ÏêÏ¸ËµÃ÷
+    %MESH æ­¤å¤„æ˜¾ç¤ºæœ‰å…³æ­¤ç±»çš„æ‘˜è¦
+    %   æ­¤å¤„æ˜¾ç¤ºè¯¦ç»†è¯´æ˜
     methods(Static)
         function im = imread(path)
             % Read image from path and turn to grayscale image in [0, 1]
             im = imread(path);
-            im = double(rgb2gray(im)) / 255;
+            if size(im, 3) == 3
+                im = double(rgb2gray(im)) / 255;
+            elseif size(im, 3) == 1
+                im = double(im) / 255;
+            end
         end
         
         function padded_im = pad2square(im)

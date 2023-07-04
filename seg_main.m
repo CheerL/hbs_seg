@@ -72,7 +72,7 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
         c2 = mean(static(bg));
         seg = c1 * tg + c2 * bg;
 
-        if ((abs(c1 - c1_old) < 5e-4) && (abs(c2 - c2_old) < 5e-4))
+        if ((abs(c1 - c1_old) < 1e-4) && (abs(c2 - c2_old) < 1e-4))
             stopcount = stopcount + 1;
         else
             stopcount = 0;
@@ -111,8 +111,15 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                 drawnow;
 
                 if seg_display ~= "" && endsWith(seg_display, '.png')
-                    seg_path = replace(seg_display, '.png', ['_', num2str(k), '.png']);
-                    saveas(gcf, seg_path);
+                    split_path = split(seg_display, '/');
+                    seg_filename = split_path(end);
+                    seg_detail_dir = replace(seg_display, seg_filename, 'detail');
+                    if exist(seg_detail_dir, 'dir') == 0
+                        mkdir(seg_detail_dir);
+                    end
+                    detail_filename = replace(seg_filename, '.png', ['_', num2str(k), '.png']);
+                    seg_detail_path = join([seg_detail_dir, detail_filename], '/');
+                    saveas(gcf, seg_detail_path);
                     saveas(gcf, seg_display);
                 end
 
