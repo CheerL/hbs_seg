@@ -26,7 +26,8 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
 
     op = Mesh.mesh_operator(face, vert);
     inner_idx = unit_disk >= 0.5;
-    outer_boundary_idx = any([vert(:, 1) == 0, vert(:, 1) == (n - 1), vert(:, 2) == 0, vert(:, 2) == (m - 1)], 2);
+    outer_boundary_idx = any([vert == [0 0], vert == [n - 1,0], vert == [0,m-1], vert == [n-1, m - 1]], 2);
+    % outer_boundary_idx = any([vert(:, 1) == 0, vert(:, 1) == (n - 1), vert(:, 2) == 0, vert(:, 2) == (m - 1)], 2);
     landmark = find(outer_boundary_idx);
 
     global best_loss;
@@ -104,6 +105,7 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                 hold on;
                 Plot.pri_scatter(map(inner_idx, :) + [1, 1]);
                 hold off;
+                % imshow(temp_seg)
                 xlabel(info);
                 subplot(1, 3, 3);
                 imshow(abs(static - seg));
@@ -121,6 +123,8 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                     seg_detail_path = join([seg_detail_dir, detail_filename], '/');
                     saveas(gcf, seg_detail_path);
                     saveas(gcf, seg_display);
+                    Plot.plot_mesh(face, map)
+                    saveas(gcf, replace(seg_display, '.png', '_mesh.png'));
                 end
 
             end

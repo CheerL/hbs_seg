@@ -1,6 +1,6 @@
 classdef Plot
-    %PLOT ´Ë´¦ÏÔÊ¾ÓÐ¹Ø´ËÀàµÄÕªÒª
-    %   ´Ë´¦ÏÔÊ¾ÏêÏ¸ËµÃ÷
+    %PLOT ï¿½Ë´ï¿½ï¿½ï¿½Ê¾ï¿½Ð¹Ø´ï¿½ï¿½ï¿½ï¿½ÕªÒª
+    %   ï¿½Ë´ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½Ï¸Ëµï¿½ï¿½
     methods(Static)
         function imshow(im)
             figure;
@@ -30,7 +30,7 @@ classdef Plot
                 error('Type Error, not suitable input');
             end
 
-            scatter(x, y, 20, 'filled');
+            scatter(x, y, 4, 'filled');
 %             axis([-1.2 1.2 -1 1])
             axis equal tight;
             box on;
