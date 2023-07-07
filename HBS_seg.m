@@ -91,41 +91,54 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
     else
         [scaling, rotation, a, b] = get_transformation_params(static, init_moving, P.T_params);
     end
-    rotation_matrix = [cos(rotation), sin(rotation); -sin(rotation), cos(rotation)];
-    updated_map = (map - [n, m] / 2) * rotation_matrix * scaling + [a, b] * max(m, n) / 2 + [n, m] / 2;
-    updated_moving = Tools.move_pixels(unit_disk, vert, updated_map) >= 0.5;
-    
-    corner_idx = [n; m*n; m*n-n+1; 1];
-    corner_dis = Tools.norm(updated_map(1, :) - vert(corner_idx, :));
-    [~, pos] = min(corner_dis);
 
-    out_bound_idx = find(vert(:, 1) == 0 | vert(:, 1) == n - 1 | vert(:, 2) == 0 | vert(:, 2) == m - 1);
-    out_bound_targets = Tools.complex2real(Tools.real2complex(vert(out_bound_idx,:) - [n-1,m-1]/2) * exp(-1i*pos/2*pi))+[n-1,m-1]/2;
-
-    unit_disk_bound = Mesh.get_bound2(unit_disk)-[1,1];
-    unit_disk_bound_idx = unit_disk_bound(:, 1) * m + unit_disk_bound(:, 2) + 1;
-    unit_disk_bound_targets = updated_map(unit_disk_bound_idx, :);
-
-    landmark = [out_bound_idx;unit_disk_bound_idx];
-    targets = [out_bound_targets;unit_disk_bound_targets];
-    
-    deformed_map = lsqc_solver(face, vert, hbs_mu, landmark, targets);
-    while 1
-        deformed_hbs_mu = bc_metric(face,vert,deformed_map,2);
-        if max(abs(deformed_hbs_mu)) < 0.9999
-            hbs_mu = deformed_hbs_mu;
-            updated_map = deformed_map;
-            updated_moving = Tools.move_pixels(unit_disk, vert, updated_map) >= 0.5;
-            break
-        end
-        deformed_hbs_mu = Tools.mu_chop(deformed_hbs_mu, 0.975);
-        deformed_map = lsqc_solver(face,vert,deformed_hbs_mu,landmark,targets);
+    params_str = replace(num2str([scaling, rotation, a, b]), " ", "_");
+    [~, static_str, ~] = fileparts(P.static);
+    [~, moving_str, ~] = fileparts(P.moving);
+    params_filename = join([static_str, moving_str, params_str, "mat"], ".");
+    params_dir = "vars";
+    if ~exist(params_dir, 'dir')
+        mkdir(params_dir);
     end
 
-    % Plot.imshow(updated_moving);
-    % hold on;
-    % Plot.pri_scatter(deformed_map);
-    % hold off;
+    params_path = join([params_dir, params_filename], "/");
+    if exist(params_path, 'file')
+        load(params_path, 'updated_map')
+        updated_moving = Tools.move_pixels(unit_disk, vert, updated_map) >= 0.5;
+        hbs_mu = bc_metric(face, vert, updated_map,2);
+    else
+        rotation_matrix = [cos(rotation), sin(rotation); -sin(rotation), cos(rotation)];
+        updated_map = (map - [n, m] / 2) * rotation_matrix * scaling + [a, b] * max(m, n) / 2 + [n, m] / 2;
+        updated_moving = Tools.move_pixels(unit_disk, vert, updated_map) >= 0.5;
+    
+        corner_idx = [n; m*n; m*n-n+1; 1];
+        corner_dis = Tools.norm(updated_map(1, :) - vert(corner_idx, :));
+        [~, pos] = min(corner_dis);
+
+        out_bound_idx = find(vert(:, 1) == 0 | vert(:, 1) == n - 1 | vert(:, 2) == 0 | vert(:, 2) == m - 1);
+        out_bound_targets = Tools.complex2real(Tools.real2complex(vert(out_bound_idx,:) - [n-1,m-1]/2) * exp(-1i*pos/2*pi))+[n-1,m-1]/2;
+
+        unit_disk_bound = Mesh.get_bound2(unit_disk)-[1,1];
+        unit_disk_bound_idx = unit_disk_bound(:, 1) * m + unit_disk_bound(:, 2) + 1;
+        unit_disk_bound_targets = updated_map(unit_disk_bound_idx, :);
+
+        landmark = [out_bound_idx;unit_disk_bound_idx];
+        targets = [out_bound_targets;unit_disk_bound_targets];
+    
+        deformed_map = lsqc_solver(face, vert, hbs_mu, landmark, targets);
+        while 1
+            deformed_hbs_mu = bc_metric(face,vert,deformed_map,2);
+            if max(abs(deformed_hbs_mu)) < 0.9999
+                hbs_mu = deformed_hbs_mu;
+                updated_map = deformed_map;
+                updated_moving = Tools.move_pixels(unit_disk, vert, updated_map) >= 0.5;
+                break
+            end
+            deformed_hbs_mu = Tools.mu_chop(deformed_hbs_mu, 0.975);
+            deformed_map = lsqc_solver(face,vert,deformed_hbs_mu,landmark,targets);
+        end
+        save(params_path, 'updated_map')
+    end
 
     if recounstruced_bound_display ~= "none"
         figure;
@@ -134,7 +147,11 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
         subplot(1, 3, 2);
         imshow(updated_moving);
         subplot(1, 3, 3);
-        imshow(abs(static - updated_moving));
+        imshow(static);
+        hold on;
+        contour(updated_moving, 1, 'EdgeColor', 'g', 'LineWidth', 1);
+        hold off;
+
         set(gcf, 'unit', 'normalized', 'position', [0 0 1 1])
         drawnow();
 
