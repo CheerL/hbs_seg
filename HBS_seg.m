@@ -48,13 +48,13 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
 
     map = normal_map .* mesh_density + [n, m] / 2;
     reconstructed_bound = Tools.complex2real(reconstructed_bound) .* mesh_density + [n, m] / 2;
-    init_moving = Tools.move_pixels(unit_disk, vert, map) >= 0.5;
+    init_moving = double(Tools.move_pixels(unit_disk, vert, map) >= 0.5);
 
     % Display init_moving, map and mu
     if init_image_display ~= "none"
         figure;
         sp1 = subplot(1, 3, 1);
-        imshow(static)
+        imshow(static);
         hold on;
         % contour(moving,[0,1],'g','LineWidth',2);
         Plot.pri_scatter(bound);
@@ -91,6 +91,38 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
     rotation_matrix = [cos(rotation), sin(rotation); -sin(rotation), cos(rotation)];
     updated_map = (map - [n, m] / 2) * rotation_matrix * scaling + [a, b] * max(m, n) / 2 + [n, m] / 2;
     updated_moving = Tools.move_pixels(unit_disk, vert, updated_map) >= 0.5;
+    
+    corner_idx = [n; m*n; m*n-n+1; 1];
+    corner_dis = Tools.norm(updated_map(1, :) - vert(corner_idx, :));
+    [~, pos] = min(corner_dis);
+
+    out_bound_idx = find(vert(:, 1) == 0 | vert(:, 1) == n - 1 | vert(:, 2) == 0 | vert(:, 2) == m - 1);
+    out_bound_targets = Tools.complex2real(Tools.real2complex(vert(out_bound_idx,:) - [n-1,m-1]/2) * exp(-1i*pos/2*pi))+[n-1,m-1]/2;
+
+    unit_disk_bound = Mesh.get_bound2(unit_disk)-[1,1];
+    unit_disk_bound_idx = unit_disk_bound(:, 1) * m + unit_disk_bound(:, 2) + 1;
+    unit_disk_bound_targets = updated_map(unit_disk_bound_idx, :);
+
+    landmark = [out_bound_idx;unit_disk_bound_idx];
+    targets = [out_bound_targets;unit_disk_bound_targets];
+    
+    deformed_map = lsqc_solver(face, vert, hbs_mu, landmark, targets);
+    while 1
+        deformed_hbs_mu = bc_metric(face,vert,deformed_map,2);
+        if max(abs(deformed_hbs_mu)) < 0.9999
+            hbs_mu = deformed_hbs_mu;
+            updated_map = deformed_map;
+            updated_moving = Tools.move_pixels(unit_disk, vert, updated_map) >= 0.5;
+            break
+        end
+        deformed_hbs_mu = Tools.mu_chop(deformed_hbs_mu, 0.975);
+        deformed_map = lsqc_solver(face,vert,deformed_hbs_mu,landmark,targets);
+    end
+
+    % Plot.imshow(updated_moving);
+    % hold on;
+    % Plot.pri_scatter(deformed_map);
+    % hold off;
 
     if recounstruced_bound_display ~= "none"
         figure;

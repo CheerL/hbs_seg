@@ -26,9 +26,14 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
 
     op = Mesh.mesh_operator(face, vert);
     inner_idx = unit_disk >= 0.5;
-    outer_boundary_idx = any([vert == [0 0], vert == [n - 1,0], vert == [0,m-1], vert == [n-1, m - 1]], 2);
-    % outer_boundary_idx = any([vert(:, 1) == 0, vert(:, 1) == (n - 1), vert(:, 2) == 0, vert(:, 2) == (m - 1)], 2);
-    landmark = find(outer_boundary_idx);
+    landmark = find(vert(:, 1) == 0 | vert(:, 1) == n - 1 | vert(:, 2) == 0 | vert(:, 2) == m - 1);
+    % landmark = find((vert(:, 1) == 0 & vert(:, 2) == 0) ...
+    %               | (vert(:, 1) == 0 & vert(:, 2) == m-1) ...
+    %               | (vert(:, 1) == n-1 & vert(:, 2) == 0) ...
+    %               | (vert(:, 1) == n-1 & vert(:, 2) == m-1));
+    % landmark = find((vert(:, 1) == round(n/2) & vert(:, 2) == round(m/2)) ...
+    %                |(vert(:, 1) == round(n/2+mesh_density) & vert(:, 2) == round(m/2)));
+    % targets = [0, 0; n-1, 0; 0, m-1; n-1, m-1];
 
     global best_loss;
     global best_map;
@@ -45,7 +50,8 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
     seg = c1 * (seg >= mid) + c2 * (seg < mid);
     loss_list = [];
 
-    figure;
+    f1 = figure;
+    % f2 = figure;
     % iterations
     for k = 1:iteration
         % Compute modified demon descent and update the registration function (mu-subproblem)
@@ -58,9 +64,10 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
 
         temp_mu = bc_metric(face, vert, temp_map, 2);
         temp_mu = Tools.mu_chop(temp_mu, upper_bound);
-        smooth_mu = smoothing(temp_mu, hbs_mu, op, alpha, beta, lambda, delta);
+        smooth_mu = smoothing(temp_mu, hbs_mu, op, inner_idx, alpha, beta, lambda, delta);
         smooth_mu = Tools.mu_chop(smooth_mu, upper_bound);
-        map = lsqc_solver(face, vert, smooth_mu, landmark, temp_map(landmark, :));
+        map = lsqc_solver(face, vert, smooth_mu, landmark, init_map(landmark, :));
+        % map = lsqc_solver(face, vert, smooth_mu, landmark, targets);
         seg = Tools.move_pixels(unit_disk, vert, map);
 
         c1_old = c1;
@@ -92,24 +99,55 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
         end
 
         if mod(k, 1) == 0
-
             if seg_display ~= "none"
+                % figure(f1);
                 % subplot(1,4,1);
                 % imshow(M);
-                subplot(1, 3, 1);
+                
+
+                sp1 = subplot(2, 3, 1);
                 % imshow(temp_seg);
+                colormap("gray");
                 plot(loss_list);
                 axis square;
-                subplot(1, 3, 2);
+                
+                sp2 = subplot(2, 3, 2);
+                imshow(seg);
+                % imshow(temp_seg)
+                xlabel(info);
+                
+                sp3 = subplot(2, 3, 3);
+                % imshow(abs(static - seg));
+                imshow(static);
+                hold on;
+                contour(seg, 1, 'EdgeColor', 'g', 'LineWidth', 1);
+                contour(temp_seg, 1, 'EdgeColor', 'r', 'LineWidth', 1);
+                hold off;
+                set(gcf, 'unit', 'normalized', 'position', [0 0 1 1]);
+                % subplot(1, 4, 4);
+                % Plot.pri_plot_mesh(face, map);
+
+                % figure(f2);
+                % imshow(static);
+                % hold on;
+                % contour(seg, 1, 'EdgeColor', 'g', 'LineWidth', 1);
+                % hold off;
+                
+                sp4 = subplot(2,3,4);
                 imshow(seg);
                 hold on;
                 Plot.pri_scatter(map(inner_idx, :) + [1, 1]);
                 hold off;
-                % imshow(temp_seg)
-                xlabel(info);
-                subplot(1, 3, 3);
-                imshow(abs(static - seg));
-                set(gcf, 'unit', 'normalized', 'position', [0 0 1 1]);
+
+                subplot(2,3,5);
+                Plot.pri_plot_mu(temp_mu, face, vert);
+                subplot(2,3,6);
+                Plot.pri_plot_mu(smooth_mu, face, vert);
+
+                colormap(sp1, 'gray');
+                colormap(sp2, 'gray');
+                colormap(sp3, 'gray');
+                colormap(sp4, 'gray');
                 drawnow;
 
                 if seg_display ~= "" && endsWith(seg_display, '.png')
@@ -119,12 +157,11 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                     if exist(seg_detail_dir, 'dir') == 0
                         mkdir(seg_detail_dir);
                     end
-                    detail_filename = replace(seg_filename, '.png', ['_', num2str(k), '.png']);
-                    seg_detail_path = join([seg_detail_dir, detail_filename], '/');
-                    saveas(gcf, seg_detail_path);
-                    saveas(gcf, seg_display);
-                    Plot.plot_mesh(face, map)
-                    saveas(gcf, replace(seg_display, '.png', '_mesh.png'));
+                    seg_detail_path = join([seg_detail_dir, seg_filename], '/');
+                    
+                    saveas(f1, seg_display);
+                    saveas(f1, replace(seg_detail_path, '.png', ['_', num2str(k), '.png']));
+                    % saveas(f2, replace(seg_detail_path, '.png', ['_contour_', num2str(k), '.png']));
                 end
 
             end
@@ -142,7 +179,7 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                 drawnow;
 
                 if seg_display ~= "" && endsWith(seg_display, '.png')
-                    seg_path = replace(seg_display, '.png', ['_final.png']);
+                    seg_path = replace(seg_display, '.png', '_final.png');
                     saveas(gcf, seg_path);
                 end
 
