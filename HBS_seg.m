@@ -77,6 +77,9 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
         drawnow();
 
         if init_image_display ~= "" && endsWith(init_image_display, '.png')
+            if ~exist(fileparts(init_image_display), 'dir')
+                mkdir(fileparts(init_image_display));
+            end
             saveas(gcf, init_image_display);
         end
 
@@ -136,6 +139,9 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
         drawnow();
 
         if recounstruced_bound_display ~= "" && endsWith(recounstruced_bound_display, '.png')
+            if ~exist(fileparts(recounstruced_bound_display), 'dir')
+                mkdir(fileparts(recounstruced_bound_display));
+            end
             saveas(gcf, recounstruced_bound_display);
         end
 

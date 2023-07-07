@@ -99,23 +99,23 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
         end
 
         if mod(k, 1) == 0
+
             if seg_display ~= "none"
                 % figure(f1);
                 % subplot(1,4,1);
                 % imshow(M);
-                
 
                 sp1 = subplot(2, 3, 1);
                 % imshow(temp_seg);
                 colormap("gray");
                 plot(loss_list);
                 axis square;
-                
+
                 sp2 = subplot(2, 3, 2);
                 imshow(seg);
                 % imshow(temp_seg)
                 xlabel(info);
-                
+
                 sp3 = subplot(2, 3, 3);
                 % imshow(abs(static - seg));
                 imshow(static);
@@ -132,16 +132,16 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                 % hold on;
                 % contour(seg, 1, 'EdgeColor', 'g', 'LineWidth', 1);
                 % hold off;
-                
-                sp4 = subplot(2,3,4);
+
+                sp4 = subplot(2, 3, 4);
                 imshow(seg);
                 hold on;
                 Plot.pri_scatter(map(inner_idx, :) + [1, 1]);
                 hold off;
 
-                subplot(2,3,5);
+                subplot(2, 3, 5);
                 Plot.pri_plot_mu(temp_mu, face, vert);
-                subplot(2,3,6);
+                subplot(2, 3, 6);
                 Plot.pri_plot_mu(smooth_mu, face, vert);
 
                 colormap(sp1, 'gray');
@@ -151,36 +151,40 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                 drawnow;
 
                 if seg_display ~= "" && endsWith(seg_display, '.png')
+                    saveas(f1, seg_display);
+
                     split_path = split(seg_display, '/');
                     seg_filename = split_path(end);
                     seg_detail_dir = replace(seg_display, seg_filename, 'detail');
-                    if exist(seg_detail_dir, 'dir') == 0
+
+                    if ~exist(seg_detail_dir, 'dir')
                         mkdir(seg_detail_dir);
                     end
+
                     seg_detail_path = join([seg_detail_dir, seg_filename], '/');
-                    
-                    saveas(f1, seg_display);
                     saveas(f1, replace(seg_detail_path, '.png', ['_', num2str(k), '.png']));
-                    % saveas(f2, replace(seg_detail_path, '.png', ['_contour_', num2str(k), '.png']));
+
+                    Plot.imshow(static);
+                    hold on;
+                    contour(seg, 1, 'EdgeColor', 'g', 'LineWidth', 1);
+                    hold off;
+                    saveas(gcf, replace(seg_detail_path, '.png', ['_', num2str(k), '.seg.png']));
                 end
-
             end
-
         end
 
         % Stopping criterion
         if stopcount == 10 || k == iteration
             % imshow(abs(static - temp_moving))
             if seg_display ~= "none"
-                figure;
-                imshow(seg)
-                xlabel(['Iteration ', num2str(k), ', stop'])
-                set(gcf, 'unit', 'normalized', 'position', [0 0 1 1]);
+                Plot.imshow(static);
+                hold on;
+                contour(seg, 1, 'EdgeColor', 'g', 'LineWidth', 1);
+                hold off;
                 drawnow;
 
                 if seg_display ~= "" && endsWith(seg_display, '.png')
-                    seg_path = replace(seg_display, '.png', '_final.png');
-                    saveas(gcf, seg_path);
+                    saveas(gcf, replace(seg_display, '.png', '_final.png'));
                 end
 
             end
