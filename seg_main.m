@@ -15,7 +15,6 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
     upper_bound = P.upper_bound; %0.9999;
     % sigma = 1; % mu + grad mu (sigma)
     % sigmaIncrease = 2; % Increase sigma within the process
-
     %% Main Program
 
     % Initialize parameters
@@ -137,13 +136,15 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                 sp4 = subplot(2, 3, 4);
                 imshow(seg);
                 hold on;
-                Plot.pri_scatter(map(inner_idx, :) + [1, 1]);
+                Plot.pri_scatter(map(inner_idx, :) + [1, 1], 2);
                 hold off;
-
-                % subplot(2, 3, 5);
-                % Plot.pri_plot_mu(temp_mu, face, vert);
-                % subplot(2, 3, 6);
-                % Plot.pri_plot_mu(smooth_mu, face, vert);
+                
+                if P.show_mu
+                    subplot(2, 3, 5);
+                    Plot.pri_plot_mu(temp_mu, face, vert);
+                    subplot(2, 3, 6);
+                    Plot.pri_plot_mu(smooth_mu, face, vert);
+                end
 
                 colormap(sp1, 'gray');
                 colormap(sp2, 'gray');
