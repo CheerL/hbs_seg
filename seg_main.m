@@ -51,7 +51,9 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
     loss_list = [];
 
     f1 = figure;
-    % f2 = figure;
+    set(f1, 'unit', 'normalized', 'position', [0 0 1 1]);
+    
+    f2 = figure;
     % iterations
     for k = 1:iteration
         % Compute modified demon descent and update the registration function (mu-subproblem)
@@ -123,7 +125,6 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                 contour(seg, 1, 'EdgeColor', 'g', 'LineWidth', 1);
                 contour(temp_seg, 1, 'EdgeColor', 'r', 'LineWidth', 1);
                 hold off;
-                set(gcf, 'unit', 'normalized', 'position', [0 0 1 1]);
                 % subplot(1, 4, 4);
                 % Plot.pri_plot_mesh(face, map);
 
@@ -139,10 +140,10 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                 Plot.pri_scatter(map(inner_idx, :) + [1, 1]);
                 hold off;
 
-                subplot(2, 3, 5);
-                Plot.pri_plot_mu(temp_mu, face, vert);
-                subplot(2, 3, 6);
-                Plot.pri_plot_mu(smooth_mu, face, vert);
+                % subplot(2, 3, 5);
+                % Plot.pri_plot_mu(temp_mu, face, vert);
+                % subplot(2, 3, 6);
+                % Plot.pri_plot_mu(smooth_mu, face, vert);
 
                 colormap(sp1, 'gray');
                 colormap(sp2, 'gray');
@@ -162,13 +163,16 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                     end
 
                     seg_detail_path = join([seg_detail_dir, seg_filename], '/');
-                    saveas(f1, replace(seg_detail_path, '.png', ['_', num2str(k), '.png']));
+                    seg_detail_display = replace(seg_detail_path, '.png', ['_', num2str(k), '.png']);
+                    % saveas(f1, );
+                    copyfile(seg_display, seg_detail_display)
 
-                    Plot.imshow(static);
+                    figure(f2);
+                    imshow(static);
                     hold on;
                     contour(seg, 1, 'EdgeColor', 'g', 'LineWidth', 1);
                     hold off;
-                    saveas(gcf, replace(seg_detail_path, '.png', ['_', num2str(k), '.seg.png']));
+                    saveas(f2, replace(seg_detail_path, '.png', ['_', num2str(k), '.seg.png']));
                 end
             end
         end
