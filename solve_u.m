@@ -4,6 +4,7 @@ num = m*n;
 
 [Ix,Iy] = gradient(I);
 [Jx,Jy] = gradient(J);
+% [IJx,IJy] = gradient(I.*J);
 Ix = Ix(:); Iy = Iy(:);
 Jx = Jx(:); Jy = Jy(:);
 

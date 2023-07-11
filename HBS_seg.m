@@ -15,16 +15,15 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
 
     %% Initializations
     [m, n] = size(static);
-    bound_point_num = P.bound_point_num;%500;
-    circle_point_num = P.circle_point_num;%1000;
-    hbs_mesh_density = P.hbs_mesh_density;%50;
-    smooth_eps = P.smooth_eps;%0;
+    bound_point_num = P.bound_point_num;
+    circle_point_num = P.circle_point_num;
+    hbs_mesh_density = P.hbs_mesh_density;
+    smooth_eps = P.smooth_eps;
     mu_upper_bound = P.upper_bound;
     
 
-    init_image_display = P.init_image_display; %"img/hbs_seg/output/init.png";
-    recounstruced_bound_display = P.recounstruced_bound_display; %"img/hbs_seg/output/reconstructed.png";
-    % seg_display = "img/hbs_seg/output/seg_display.png";
+    init_image_display = P.init_image_display;
+    recounstruced_bound_display = P.recounstruced_bound_display;
     mesh_density = min([m, n] / 4);
 
     %% Compute HBS and initial map
