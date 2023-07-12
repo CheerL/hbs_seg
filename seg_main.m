@@ -1,21 +1,24 @@
 function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_map, hbs_mu, P)
 
     %% Parameter settings
-    seg_display = P.seg_display; %'';
-    iteration = P.iteration; %100;
-    u_times = P.u_times; %20;
-    gaussian = P.gaussian; %[0, 5];
-    eta = P.eta; %1;
-    k1 = P.k1; %0.01;
-    k2 = P.k2; %100;
-    alpha = P.alpha; %1; % similarity with mu_f
-    beta = P.beta; %0; % similarity with HBS
-    delta = P.delta; %0; % grad of mu
-    lambda = P.lambda; %0.1; % abs of mu
-    upper_bound = P.upper_bound; %0.9999;
-    % sigma = 1; % mu + grad mu (sigma)
-    % sigmaIncrease = 2; % Increase sigma within the process
-    %% Main Program
+    seg_display = P.seg_display;
+    iteration = P.iteration;
+    u_times = P.u_times;
+    gaussian = P.gaussian;
+    eta = P.eta;
+    k1 = P.k1;
+    k2 = P.k2;
+    alpha = P.alpha;                % similarity with mu_f
+    beta = P.beta;                  % similarity with HBS
+    delta = P.delta;                % grad of mu
+    lambda = P.lambda;              % abs of mu
+    upper_bound = P.upper_bound;
+
+    if isfield(P, 'show_mu')
+        show_mu = P.show_mu;
+    else
+        show_mu = 0;
+    end
 
     % Initialize parameters
     warning('off', 'all')
@@ -51,7 +54,7 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
 
     f1 = figure;
     set(f1, 'unit', 'normalized', 'position', [0 0 1 1]);
-    
+
     f2 = figure;
     % iterations
     for k = 1:iteration
@@ -103,9 +106,6 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
 
             if seg_display ~= "none"
                 figure(f1);
-                % subplot(1,4,1);
-                % imshow(M);
-
                 sp1 = subplot(2, 3, 1);
                 % imshow(temp_seg);
                 colormap("gray");
@@ -124,22 +124,14 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                 contour(seg, 1, 'EdgeColor', 'g', 'LineWidth', 1);
                 contour(temp_seg, 1, 'EdgeColor', 'r', 'LineWidth', 1);
                 hold off;
-                % subplot(1, 4, 4);
-                % Plot.pri_plot_mesh(face, map);
-
-                % figure(f2);
-                % imshow(static);
-                % hold on;
-                % contour(seg, 1, 'EdgeColor', 'g', 'LineWidth', 1);
-                % hold off;
 
                 sp4 = subplot(2, 3, 4);
                 imshow(seg);
                 hold on;
-                Plot.pri_scatter(map(inner_idx, :) + [1, 1], 2);
+                Plot.pri_scatter(map + [1, 1], 2);
                 hold off;
-                
-                if P.show_mu
+
+                if show_mu
                     subplot(2, 3, 5);
                     Plot.pri_plot_mu(temp_mu, face, vert);
                     subplot(2, 3, 6);
@@ -165,7 +157,6 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
 
                     seg_detail_path = join([seg_detail_dir, seg_filename], '/');
                     seg_detail_display = replace(seg_detail_path, '.png', ['_', num2str(k), '.png']);
-                    % saveas(f1, );
                     copyfile(seg_display, seg_detail_display)
 
                     figure(f2);
@@ -175,12 +166,13 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                     hold off;
                     saveas(f2, replace(seg_detail_path, '.png', ['_', num2str(k), '.seg.png']));
                 end
+
             end
+
         end
 
         % Stopping criterion
         if stopcount == 10 || k == iteration
-            % imshow(abs(static - temp_moving))
             if seg_display ~= "none"
                 Plot.imshow(static);
                 hold on;
