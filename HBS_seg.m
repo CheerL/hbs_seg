@@ -14,7 +14,7 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
     % seg                deformed moving image
 
     %% Initializations
-    [m, n] = size(static);
+    
 
     bound_point_num = P.bound_point_num;
     circle_point_num = P.circle_point_num;
@@ -30,27 +30,36 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
         distort_bound = 0;
     end
 
-    %% Compute HBS and initial map
-    bound = Mesh.get_bound(moving, bound_point_num);
-
+    [m, n] = size(static);
     [face, vert] = Mesh.rect_mesh(m, n, 0);
     mesh_density = min([m, n] / 4);
     normal_vert = (vert - [n / 2, m / 2]) ./ mesh_density;
+    unit_disk = zeros(m, n);
+    unit_disk(Tools.norm(normal_vert) <= (1 + smooth_eps)) = 1;
 
-    [hbs, ~, ~, ~, disk_face, disk_vert, ~] = HBS(bound, circle_point_num, hbs_mesh_density);
+
+    %% Compute HBS and initial map
+    
+
+    if size(moving, 2) ~= 1
+        bound = Mesh.get_bound(moving, bound_point_num);
+        [hbs, ~, ~, ~, disk_face, disk_vert, ~] = HBS(bound, circle_point_num, hbs_mesh_density);
+    else
+        hbs = moving;
+        circle_interval = (2 / circle_point_num)*pi;
+        [disk_face, disk_vert] = Mesh.unit_disk_mesh(hbs_mesh_density, circle_interval);
+    end
+    
     [reconstructed_bound, inner, outer, extend_vert, ~] = HBS_reconstruct(hbs, disk_face, disk_vert, m, n, mesh_density);
     extend_map = Tools.complex2real([reconstructed_bound; inner; outer]);
 
     interp_map_x = scatteredInterpolant(extend_vert, extend_map(:, 1));
     interp_map_y = scatteredInterpolant(extend_vert, extend_map(:, 2));
     normal_map = [interp_map_x(normal_vert), interp_map_y(normal_vert)];
-    hbs_mu = bc_metric(face, normal_vert, normal_map, 2);
-    hbs_mu = Tools.mu_chop(hbs_mu, mu_upper_bound);
-
-    unit_disk = zeros(m, n);
-    unit_disk(Tools.norm(normal_vert) <= (1 + smooth_eps)) = 1;
-
+        
     map = normal_map .* mesh_density + [n, m] / 2;
+    hbs_mu = bc_metric(face, vert, map, 2);
+    hbs_mu = Tools.mu_chop(hbs_mu, mu_upper_bound);
     reconstructed_bound = Tools.complex2real(reconstructed_bound) .* mesh_density + [n, m] / 2;
     init_moving = double(Tools.move_pixels(unit_disk, vert, map) >= 0.5);
 
@@ -60,15 +69,19 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
         sp1 = subplot(1, 3, 1);
         imshow(static);
         hold on;
-        % contour(moving,[0,1],'g','LineWidth',2);
-        Plot.pri_scatter(bound);
-        plot(real(bound), imag(bound), 'g', 'LineWidth', 1);
+        if size(moving, 2) ~= 1  
+            % contour(moving,[0,1],'g','LineWidth',2);
+            Plot.pri_scatter(bound);
+            plot(real(bound), imag(bound), 'g', 'LineWidth', 1);
+        else
+            contour(init_moving, 1, 'g','LineWidth',2);
+        end
         hold off;
 
         sp2 = subplot(1, 3, 2);
         imshow(init_moving)
         hold on;
-        Plot.pri_scatter(reconstructed_bound);
+        Plot.pri_scatter(reconstructed_bound+[1,1]);
         % plot(real(reconstructed_bound), imag(reconstructed_bound), 'g','LineWidth',1);
         % Plot.pri_plot_mesh(face, map);
         hold off;
