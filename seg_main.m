@@ -8,6 +8,7 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
     eta = P.eta;
     k1 = P.k1;
     k2 = P.k2;
+    k3 = P.k3;
     alpha = P.alpha;                % similarity with mu_f
     beta = P.beta;                  % similarity with HBS
     delta = P.delta;                % grad of mu
@@ -59,7 +60,7 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
     % iterations
     for k = 1:iteration
         % Compute modified demon descent and update the registration function (mu-subproblem)
-        [temp_map, temp_seg] = compute_u(static, seg, vert, vert, op, u_times, gaussian, eta, k1, k2, c1, c2);
+        [temp_map, temp_seg] = compute_u(static, seg, vert, vert, op, u_times, gaussian, eta, k1, k2, k3, c1, c2);
         Fx = scatteredInterpolant(vert, temp_map(:, 1));
         Fy = scatteredInterpolant(vert, temp_map(:, 2));
         temp_map = [Fx(map), Fy(map)];
@@ -162,7 +163,7 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                     figure(f2);
                     imshow(static);
                     hold on;
-                    contour(seg, 1, 'EdgeColor', 'g', 'LineWidth', 1);
+                    contour(temp_seg, 1, 'EdgeColor', 'g', 'LineWidth', 1);
                     hold off;
                     saveas(f2, replace(seg_detail_path, '.png', ['_', num2str(k), '.seg.png']));
                 end

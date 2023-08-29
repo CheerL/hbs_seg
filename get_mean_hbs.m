@@ -2,32 +2,37 @@ addpath('./dependencies');
 addpath('./dependencies/im2mesh');
 addpath('./dependencies/mfile');
 addpath('./dependencies/aco-v1.1/aco');
+addpath('./dependencies/map/map');
 close all;
 
-
+m = 256;
+n = 256;
 bound_point_num = 500;
 circle_point_num = 1000;
 hbs_mesh_density = 50;
 smooth_eps = 5e-3;
 mu_upper_bound = 0.9999;
+input_dir = 'img/hbs_seg/brains/bt/';
+mean_img_path = 'img/hbs_seg/output/mean.png';
+mean_hbs_path = 'vars/mean_bt.mat';
 
-m = 256;
-n = 256;
+
 [face, vert] = Mesh.rect_mesh(m, n, 0);
 mesh_density = min([m, n] / 4);
 normal_vert = (vert - [n / 2, m / 2]) ./ mesh_density;
 unit_disk = zeros(m, n);
 unit_disk(Tools.norm(normal_vert) <= (1 + smooth_eps)) = 1;
 
-num = 7;
+start_num = 1;
+num = 5;
 hbs_cell = cell(num, 1);
 hbs_mu_cell = cell(num, 1);
 reconstructed_cell = cell(num, 1);
 map_cell = cell(num, 1);
 
-for i=1:num
-static_path = ['img/hbs_seg/brains/type2/', num2str(i), '.png'];
-img_path = ['img/hbs_seg/brains/type2/', num2str(i), 'm.png'];
+for i=start_num:start_num+num-1
+static_path = [input_dir, num2str(i), '.png'];
+img_path = [input_dir, num2str(i), '.m.png'];
 
 img = Mesh.imread(img_path);
 img = double(img >= 0.5);
@@ -76,7 +81,7 @@ map_cell{i} = map;
 end
 
 mean_hbs = zeros(size(hbs));
-for i=1:num
+for i=start_num:start_num+num-1
     mean_hbs = mean_hbs + hbs_cell{i} / num;
 end
 
@@ -93,7 +98,7 @@ map = normal_map .* mesh_density + [n, m] / 2;
 % reconstructed_bound = Tools.complex2real(reconstructed_bound) .* mesh_density + [n, m] / 2;
 init_moving = double(Tools.move_pixels(unit_disk, vert, map) >= 0.5);
 
-figure;
+f1 = figure;
 set(gcf, 'unit', 'normalized', 'position', [0 0 1 1]);
 % sp1 = subplot(1, 3, 1);
 % imshow(static);
@@ -107,4 +112,6 @@ Plot.pri_plot_mu(hbs_mu, face, vert);
 colormap(sp1, "gray");
 colormap(sp2, "gray");
 drawnow;
+saveas(f1, mean_img_path);
+save(mean_hbs_path, 'mean_hbs', 'hbs_mu');
 

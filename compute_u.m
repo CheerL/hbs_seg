@@ -1,4 +1,4 @@
-function [map, moving] = compute_u(static, init_moving, vert, init_map, op, times, gaussian_params, eta, k1, k2, c1, c2)
+function [map, moving] = compute_u(static, init_moving, vert, init_map, op, times, gaussian_params, eta, k1, k2, k3, c1, c2)
     [m, n] = size(static);
     map = init_map;
     mid = (c1 + c2) / 2;
@@ -13,7 +13,7 @@ function [map, moving] = compute_u(static, init_moving, vert, init_map, op, time
     end
 
     for i = 1:times
-        [ux, uy] = solve_u(static, moving, op, eta, k1, k2);
+        [ux, uy] = solve_u(static, moving, op, eta, k1, k2, k3);
         ux(isnan(ux)) = 0;
         uy(isnan(uy)) = 0;
         ux = reshape(ux, [m, n]);

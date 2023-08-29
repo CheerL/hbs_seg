@@ -100,6 +100,7 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
             end
 
             saveas(gcf, init_image_display);
+            fprintf('Saved to %s', init_image_display);
         end
 
     end
@@ -149,10 +150,12 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
 
             deformed_map = lsqc_solver(face, vert, hbs_mu, landmark, targets);
 
+            i = 0;
             while 1
                 deformed_hbs_mu = bc_metric(face, vert, deformed_map, 2);
                 fprintf('%f\n', max(abs(deformed_hbs_mu)));
-                if max(abs(deformed_hbs_mu)) < 0.9999
+                i = i + 1;
+                if max(abs(deformed_hbs_mu)) < 0.9999 || i > 50
                     hbs_mu = deformed_hbs_mu;
                     updated_map = deformed_map;
                     updated_moving = Tools.move_pixels(unit_disk, vert, updated_map) >= 0.5;
@@ -162,10 +165,8 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
                 deformed_hbs_mu = Tools.mu_chop(deformed_hbs_mu, 0.975, 0.95);
                 deformed_map = lsqc_solver(face, vert, deformed_hbs_mu, landmark, targets);
             end
-
+            save(params_path, 'updated_map')
         end
-
-        save(params_path, 'updated_map')
     end
 
     if recounstruced_bound_display ~= "none"
@@ -190,6 +191,7 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
             end
 
             saveas(gcf, recounstruced_bound_display);
+            fprintf('Saved to %s', init_image_display);
         end
 
     end

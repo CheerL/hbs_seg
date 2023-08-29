@@ -1,4 +1,4 @@
-function [ux, uy] = solve_u(I, J, Op, eta, k1, k2)
+function [ux, uy] = solve_u(I, J, Op, eta, k1, k2, k3)
     [m, n] = size(I);
     num = m * n;
 
@@ -11,7 +11,7 @@ function [ux, uy] = solve_u(I, J, Op, eta, k1, k2)
     E = speye(num);
     diff = J(:) - I(:);
 
-    A = spdiags(eta * (Ix .^ 2 + Iy .^ 2), 0, num, num) + k1 * E - k2 * Op.laplacian;
+    A = spdiags(eta * (Ix .^ 2 + Iy .^ 2), 0, num, num) + k1 * E - k2 * Op.laplacian + k3 * Op.laplacian * Op.laplacian;
 
     % s = eta*diff.*Ix;
     % t = eta*diff.*Iy;
