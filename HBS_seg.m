@@ -30,6 +30,12 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
         distort_bound = 0;
     end
 
+    if isfield(P, 'reverse_image') && P.reverse_image
+        show_static = 1 - static;
+    else
+        show_static = static;
+    end
+
     [m, n] = size(static);
     [face, vert] = Mesh.rect_mesh(m, n, 0);
     mesh_density = min([m, n] / 4);
@@ -67,7 +73,7 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
     if init_image_display ~= "none"
         figure;
         sp1 = subplot(1, 3, 1);
-        imshow(static);
+        imshow(show_static);
         hold on;
         if size(moving, 2) ~= 1  
             % contour(moving,[0,1],'g','LineWidth',2);
@@ -100,16 +106,16 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
             end
 
             saveas(gcf, init_image_display);
-            fprintf('Saved to %s', init_image_display);
+            fprintf('Saved to %s\n', init_image_display);
         end
 
     end
 
     %% Transform initial moving
-    if isempty(P.T_params)
+    if isempty(P.t_params)
         [scaling, rotation, a, b] = get_transformation_params(static, init_moving);
     else
-        [scaling, rotation, a, b] = get_transformation_params(static, init_moving, P.T_params);
+        [scaling, rotation, a, b] = get_transformation_params(static, init_moving, P.t_params);
     end
 
     params_str = replace(num2str([scaling, rotation, a, b]), " ", "_");
@@ -172,11 +178,11 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
     if recounstruced_bound_display ~= "none"
         figure;
         subplot(1, 3, 1)
-        imshow(static);
+        imshow(show_static);
         subplot(1, 3, 2);
         imshow(updated_moving);
         subplot(1, 3, 3);
-        imshow(static);
+        imshow(show_static);
         hold on;
         contour(updated_moving, 1, 'EdgeColor', 'g', 'LineWidth', 1);
         hold off;
@@ -191,7 +197,7 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
             end
 
             saveas(gcf, recounstruced_bound_display);
-            fprintf('Saved to %s', init_image_display);
+            fprintf('Saved to %s\n', recounstruced_bound_display);
         end
 
     end

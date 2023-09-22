@@ -4,5 +4,7 @@
 *.ipynb_checkpoints
 **/output/**/*.png
 .vscode
-run_instance_*.m
+run_instance*.m
+run.py
+config
 vars

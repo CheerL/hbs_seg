@@ -21,6 +21,12 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
         show_mu = 0;
     end
 
+    if isfield(P, 'reverse_image') && P.reverse_image
+        show_static = 1 - static;
+    else
+        show_static = static;
+    end
+
     % Initialize parameters
     warning('off', 'all')
     stopcount = 0;
@@ -94,8 +100,8 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
         % Display intermediate results
         loss = norm(static - seg, 'fro');
         loss_list = cat(2, loss_list, loss);
-        info_fmt = 'Interation %i\n C1: %.4f -> %.4f, C2: %.4f -> %.4f\n loss: %.3f, stopcount %i\n';
-        info = sprintf(info_fmt, k, c1_old, c1, c2_old, c2, loss, stopcount);
+        info_fmt = 'Interation %i of %s \n C1: %.4f -> %.4f, C2: %.4f -> %.4f\n loss: %.3f, stopcount %i\n';
+        info = sprintf(info_fmt, k, P.config_name, c1_old, c1, c2_old, c2, loss, stopcount);
         fprintf(info);
 
         if loss < best_loss
@@ -104,7 +110,6 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
         end
 
         if mod(k, 1) == 0
-
             if seg_display ~= "none"
                 figure(f1);
                 sp1 = subplot(2, 3, 1);
@@ -120,7 +125,7 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
 
                 sp3 = subplot(2, 3, 3);
                 % imshow(abs(static - seg));
-                imshow(static);
+                imshow(show_static);
                 hold on;
                 contour(seg, 1, 'EdgeColor', 'g', 'LineWidth', 1);
                 contour(temp_seg, 1, 'EdgeColor', 'r', 'LineWidth', 1);
@@ -146,26 +151,37 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                 drawnow;
 
                 if seg_display ~= "" && endsWith(seg_display, '.png')
-                    saveas(f1, seg_display);
-
-                    split_path = split(seg_display, '/');
-                    seg_filename = split_path(end);
-                    seg_detail_dir = replace(seg_display, seg_filename, 'detail');
-
-                    if ~exist(seg_detail_dir, 'dir')
-                        mkdir(seg_detail_dir);
-                    end
-
-                    seg_detail_path = join([seg_detail_dir, seg_filename], '/');
-                    seg_detail_display = replace(seg_detail_path, '.png', ['_', num2str(k), '.png']);
-                    copyfile(seg_display, seg_detail_display)
-
                     figure(f2);
-                    imshow(static);
+                    imshow(show_static);
                     hold on;
                     contour(temp_seg, 1, 'EdgeColor', 'g', 'LineWidth', 1);
                     hold off;
-                    saveas(f2, replace(seg_detail_path, '.png', ['_', num2str(k), '.seg.png']));
+
+                    result_path = seg_display;
+                    result_seg_path = replace(result_path, '.png', '.seg.png');
+
+                    splited_result_path_list = split(result_path, '/');
+                    result_filename = splited_result_path_list(end);
+                    iter_result_dir = replace(result_path, result_filename, 'detail');
+                    if ~exist(iter_result_dir, 'dir')
+                        mkdir(iter_result_dir);
+                    end
+                    
+                    iter_result_path = join([iter_result_dir, result_filename], '/');
+                    iter_result_path = replace(iter_result_path, '.png', ['_', num2str(k), '.png']);
+                    iter_result_seg_path = replace(iter_result_path, '.png', '.seg.png');
+
+                    saveas(f1, result_path);
+                    saveas(f2, result_seg_path);
+                    copyfile(result_path, iter_result_path);
+                    copyfile(result_seg_path, iter_result_seg_path);
+
+                    if loss <= best_loss
+                        best_result_path = replace(result_path, '.png', '.best.png');
+                        best_result_seg_path = replace(result_seg_path, '.png', '.best.png');
+                        copyfile(result_path, best_result_path);
+                        copyfile(result_seg_path, best_result_seg_path);
+                    end
                 end
 
             end
@@ -175,7 +191,7 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
         % Stopping criterion
         if stopcount == 10 || k == iteration
             if seg_display ~= "none"
-                Plot.imshow(static);
+                Plot.imshow(show_static);
                 hold on;
                 contour(seg, 1, 'EdgeColor', 'g', 'LineWidth', 1);
                 hold off;
