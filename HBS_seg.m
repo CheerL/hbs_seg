@@ -130,7 +130,7 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
 
     params_path = join([params_dir, params_filename], "/");
 
-    if exist(params_path, 'file')
+    if exist(params_path, 'file') && distort_bound
         load(params_path, 'updated_map')
         updated_moving = Tools.move_pixels(unit_disk, vert, updated_map) >= 0.5;
         hbs_mu = bc_metric(face, vert, updated_map, 2);
