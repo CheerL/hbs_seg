@@ -183,10 +183,11 @@ classdef Plot
 
         function pri_plot_map(map, vert)
             scatter3(vert(:, 1), vert(:, 2), abs(map), 10, abs(map), 'filled');
-            %             axis([-1 1 -1 1 0 1]);
-            %             axis equal
+                        axis([0 1 0 1 0 0.01]);
+                        view([0 90]);
+                        % axis equal
             colormap jet;
-            box on;
+            % box on;
         end
     end
 
