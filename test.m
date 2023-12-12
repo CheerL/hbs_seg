@@ -58,17 +58,18 @@ upper_bound = 0.9999;
 % hbs_mu = Tools.mu_chop(hbs_mu, mu_upper_bound);
 n = 200;
 [disk_face, disk_vert] = Mesh.rect_mesh(n, n, 1);
+dis = 1/(n-1);
 x = disk_vert(:,1);
 y = disk_vert(:,2);
 z = x + 1i*y;
 zt = x - 1i*y;
-% he = x.^4 - 1*y.^4 + 5i * x .* y.^2 - 1i * x.^2 .* y + 3*x.^2 .* y;
-he = z.^2 - 1*zt.^2 + 0*1i * z .* zt;
-% he = (x+1i*y).^4 + (x-1i*y).^3;
-% he = x.^2 - 1*y.^2 + 3i * x .* y;
-p = 0.6+0.6i;
+he = x.^3 - 1*y.^3 + 5i * x .* y.^2 - 1i * x.^2 .* y + 3*x.^2 .* y;
+% he = z.^2 - 1*zt.^2 + 0*1i * z .* zt;
+% he = (x+1i*y).^3;
+% he = x.^2 - 2*y.^2 + 3i * x .* y;
+% p = 0.6+0.6i;
 % he = (he-p)./(1-conj(p)*he);
-[dx,dy] = gradient(reshape(he,n,n), 1/n);
+[dx,dy] = gradient(reshape(he,n,n), dis);
 dz = (dx - 1i*dy)/2;
 dp = (dx + 1i*dy)/2;
 hbs_p = dp ./ dz;
@@ -82,13 +83,13 @@ log_hbs = log(hbs_v);
 % hbs_v = log(hbs_v);
 % hbs_v(1) = hbs_v(2);
 % lp_he = Op.laplacian * he;
-lp_he = del2(reshape(he,n,n), 1/n);
+lp_he = del2(reshape(he,n,n), dis);
 % lp_hbs = Op.laplacian * hbs_v;
-lp_hbs = del2(reshape(log_hbs,n,n), 1/n);
+lp_hbs = del2(reshape(log_hbs,n,n), dis);
 % lp_hbs_imag = Op.laplacian * imag(hbs_v);
-lp_hbs_imag = del2(reshape((imag(log_hbs)),n,n), 1/n);
+lp_hbs_imag = del2(reshape((imag(log_hbs)),n,n), dis);
 % lp_hbs_real = Op.laplacian * real(hbs_v);
-lp_hbs_real = del2(reshape((real(log_hbs)),n,n), 1/n);
+lp_hbs_real = del2(reshape((real(log_hbs)),n,n), dis);
 
 mean(abs(lp_he), 'all')
 mean(abs(lp_hbs), 'all')
@@ -109,3 +110,4 @@ mean(abs(lp_hbs_real), 'all')
 % set(gcf,'unit','normalized','position',[0 0 1 1])
 % Plot.imshow(init_moving);
 % drawnow();
+

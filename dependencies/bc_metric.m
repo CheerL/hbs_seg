@@ -14,7 +14,7 @@ function mu = bc_metric(face, vertex, map, dimension)
 %
 % Outputs
 % A : The corresponding Beltrami coefficients.
-%
+%   
 % Function is written by Jeffery Ka Chun Lam (2013)
 % www.jefferykclam.com
 % Reference : 
@@ -84,9 +84,10 @@ function [e1, e2, e3] = GetEdge(vertex,face)
 end
 
 function area = GetSignedArea_edge(e1, e2)
-    xb = -e1(1,:);
-    yb = -e1(2,:);
     xa = e2(1,:);
+    xb = -e1(1,:);
     ya = e2(2,:);
+    yb = -e1(2,:);
+    
     area = ( xa.*yb - xb.*ya )/2;
 end

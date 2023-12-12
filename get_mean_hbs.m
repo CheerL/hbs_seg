@@ -13,7 +13,7 @@ hbs_mesh_density = 50;
 smooth_eps = 5e-3;
 mu_upper_bound = 0.9999;
 input_dir = 'img/hbs_seg/brains/bt/';
-mean_img_path = 'img/hbs_seg/output/mean.png';
+mean_img_path = 'img/hbs_seg/output/mean_bt.png';
 mean_hbs_path = 'vars/mean_bt.mat';
 
 
@@ -24,7 +24,7 @@ unit_disk = zeros(m, n);
 unit_disk(Tools.norm(normal_vert) <= (1 + smooth_eps)) = 1;
 
 start_num = 1;
-num = 5;
+num = 10;
 hbs_cell = cell(num, 1);
 hbs_mu_cell = cell(num, 1);
 reconstructed_cell = cell(num, 1);
@@ -33,6 +33,10 @@ map_cell = cell(num, 1);
 for i=start_num:start_num+num-1
 static_path = [input_dir, num2str(i), '.png'];
 img_path = [input_dir, num2str(i), '.m.png'];
+
+if ~isfile(static_path) || ~isfile(img_path)
+    continue
+end
 
 img = Mesh.imread(img_path);
 img = double(img >= 0.5);
@@ -73,6 +77,7 @@ Plot.pri_plot_mu(hbs_mu, face, vert);
 colormap(sp1, "gray");
 colormap(sp2, "gray");
 drawnow;
+saveas(gcf, replace(mean_img_path, 'mean', int2str(i)));
 
 hbs_cell{i} = hbs;
 hbs_mu_cell{i} = hbs_mu;
@@ -81,9 +86,14 @@ map_cell{i} = map;
 end
 
 mean_hbs = zeros(size(hbs));
+count = 0;
 for i=start_num:start_num+num-1
-    mean_hbs = mean_hbs + hbs_cell{i} / num;
+    if size(hbs_cell{i})
+        mean_hbs = mean_hbs + hbs_cell{i};
+        count = count + 1;
+    end
 end
+mean_hbs = mean_hbs / count;
 
 [reconstructed_bound, inner, outer, extend_vert, ~] = HBS_reconstruct(mean_hbs, disk_face, disk_vert, m, n, mesh_density);
 
