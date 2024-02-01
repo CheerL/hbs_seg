@@ -1,4 +1,8 @@
-function [bound, inner, outer, nvert, nface] = HBS_reconstruct(hbs, face, vert, mesh_height, mesh_width, mesh_density)
+function [bound, inner, outer, nvert, nface] = HBS_reconstruct(hbs, face, vert, mesh_height, mesh_width, mesh_density, center_x, center_y)
+if nargin < 8
+    center_x = mesh_width / 2;
+    center_y = mesh_height / 2;
+end
 if nargin < 6
     mesh_density = 50;
 end
@@ -11,7 +15,7 @@ end
 
 
 circle_point_num = length(vert(abs(Tools.norm(vert) - 1) < 1e-4,:));
-[nface, nvert, ~, outer_vert] = Mesh.rect_mesh_from_disk(face, vert, mesh_height, mesh_width, mesh_density);
+[nface, nvert, ~, outer_vert] = Mesh.rect_mesh_from_disk(face, vert, mesh_height, mesh_width, mesh_density, center_x, center_y);
 
 zero_pos = find(all([vert(:,1)==0, vert(:,2)==0], 2));
 one_pos = find(all([vert(:,1)==1, vert(:,2)==0], 2));

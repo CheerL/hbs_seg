@@ -1,41 +1,37 @@
-function [map, moving] = compute_u(static, init_moving, vert, init_map, op, times, gaussian_params, eta, k1, k2, k3, c1, c2)
+function u = compute_u( ...
+    static, seg, unit_disk, vert, map, landmark, ...
+    op, gaussian_params, eta, k1, k2, target_color, background_color ...
+)
     [m, n] = size(static);
-    map = init_map;
-    mid = (c1 + c2) / 2;
+    % if vert == init_map
+    %     % method = 1;
+    %     moving = init_moving;
+    % else
+    %     % method = 2;
+    %     moving = Tools.move_pixels(init_moving, vert, map);
+    %     moving = c1 * (moving >= mid) + c2 * (moving < mid);
+    % end
+    % moving = target_color * init_moving + background_color * (1 - init_moving);
+    % moving = Tools.move_seg(unit_disk,vert,map,target_color,background_color);
+    moving = seg;
+    [ux, uy] = solve_u(static, moving, map, vert, op, landmark, eta, k1, k2);
 
-    if vert == init_map
-        method = 1;
-        moving = init_moving;
-    else
-        method = 2;
-        moving = Tools.move_pixels(init_moving, vert, map);
-        moving = c1 * (moving >= mid) + c2 * (moving < mid);
-    end
-
-    for i = 1:times
-        [ux, uy] = solve_u(static, moving, op, eta, k1, k2, k3);
-        ux(isnan(ux)) = 0;
-        uy(isnan(uy)) = 0;
+    if gaussian_params(1) > 0
         ux = reshape(ux, [m, n]);
         uy = reshape(uy, [m, n]);
-
-        if gaussian_params(1) > 0
-            uxs = gaussian_params(2) * imgaussfilt(ux, gaussian_params(1));
-            uys = gaussian_params(2) * imgaussfilt(uy, gaussian_params(1));
-        else
-            uxs = gaussian_params(2) * ux;
-            uys = gaussian_params(2) * uy;
-        end
-
-        if method == 1
-            map = map + [uxs(:), uys(:)];
-        else
-            Fx = scatteredInterpolant(vert, uxs(:));
-            Fy = scatteredInterpolant(vert, uys(:));
-            map = map + [Fx(map), Fy(map)];
-        end
-
-        moving = Tools.move_pixels(init_moving, vert, map);
-        moving = c1 * (moving >= mid) + c2 * (moving < mid);
+        ux = gaussian_params(2) * imgaussfilt(ux, gaussian_params(1));
+        uy = gaussian_params(2) * imgaussfilt(uy, gaussian_params(1));
+        ux = ux(:);
+        uy = uy(:);
+    else
+        ux = gaussian_params(2) * ux;
+        uy = gaussian_params(2) * uy;
     end
+
+    u = vert + [ux,uy];
+    % map = map + [ux, uy];
+%     Fx = scatteredInterpolant(vert, ux);
+%     Fy = scatteredInterpolant(vert, uy);
+%     map = map+ [Fx(map), Fy(map)];
+    % moving = Tools.move_seg(seg,vert,vert+[ux,uy],target_color,background_color);
 end

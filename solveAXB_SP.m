@@ -1,52 +1,37 @@
-function x = solveAXB_SP(A, B)
+function x = solveAXB_SP(A, B, boundary_pos)
     %used for solving AX = B, X is [row*col,1];
     %only works for squire matrix.
     %by ys.
-
+    n = size(A, 1);
+    if nargin == 2
+        boundary_pos = [];
+    end
     %additional A is sparse.
-    iteration = 100;
-    % A_bak = A;
-    x0 = sparse(size(A, 1), 1);
+    iteration = 200;
+    x0 = sparse(n, 1);
     x = x0;
     r = B - A * x;
     p = r;
-    r_norm = r' * r;
 
     for i = 1:iteration
-        % rb = r;
-        % rb(bd) = 0;
-        % p = A * rb;
-        % %  mini residual
-        % % alpha = (p' * r) / (p' * p + eps);
-        % % steepest descent
-        % alpha = (r' * r) / (p' * r + eps);
-        % dx = alpha * rb;
-        % dr = alpha * p;
-        % dr_norm = norm(dr);
-        % if dr_norm < 1e-6
-        %     break
-        % end
-
-        % x = x + dx;
-        % r = r - dr;
-
         % CG method
+        p(boundary_pos) = 0;
         Ap = A * p;
         pAp = p' * Ap;
-        % rAp = r' * Ap;
-        alpha = r_norm / (pAp + eps);
+        alpha = (r' * p) / (pAp + eps);
         dx = alpha * p;
         dr = alpha * Ap;
-        dr_norm = norm(dr);
-        if dr_norm < 1e-6
-            break
-        end
         x = x + dx;
         r = r - dr;
-        r_norm_new = r' * r;
-        beta = r_norm_new / (r_norm + eps);
-        % beta = (r_norm_new * rAp ) / (r_norm * pAp + eps);
+        % r_norm_old = r_norm;
+        r_norm = r' * r;
+        % beta = r_norm / (r_norm_old + eps);
+        beta = -(r' * Ap) / (pAp + eps);
         p = r + beta * p;
-        r_norm = r_norm_new;
+
+        if r_norm < 1e-6
+            break
+        end
+        
     end
 end

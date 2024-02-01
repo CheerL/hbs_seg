@@ -1,69 +1,48 @@
-function [ux, uy] = solve_u(I, J, Op, eta, k1, k2, k3)
+function [ux, uy] = solve_u(I, J, map, vert, Op, boundary_pos, eta, k1, k2)
     [m, n] = size(I);
     num = m * n;
-
-    [Ix, Iy] = gradient(I);
-    [Jx, Jy] = gradient(J);
-    % [IJx,IJy] = gradient(I.*J);
-    Ix = Ix(:); Iy = Iy(:);
-    Jx = Jx(:); Jy = Jy(:);
+    
+    k3 = 0.0;
+    k4 = 0.0;
 
     E = speye(num);
+    res_x = map(:,1) - vert(:,1);
+    res_y = map(:,2) - vert(:,2);
+    
+%     FI = scatteredInterpolant(vert, I(:));
+%     Imap = FI(map);
+    
+%     I = reshape(Imap, m, n);
+%     J = colored_unit_disk;
+    
+%     [gIx, gIy] = gradient(I);
+    [gJx, gJy] = gradient(J);
+%     intp_diff = scatteredInterpolant(vert, I(:)-J(:));
+%     diff = intp_diff(map);
     diff = J(:) - I(:);
+    
+    gx = reshape(gJx, [], 1);
+    gy = reshape(gJy, [], 1);
+    
+    
 
-    A = spdiags(eta * (Ix .^ 2 + Iy .^ 2), 0, num, num) + k1 * E - k2 * Op.laplacian + k3 * Op.laplacian * Op.laplacian;
+    A = spdiags(eta * gx.^2, 0, num, num) + (k1+k3) * E - (k2+k4) * Op.laplacian;
+    % B = spdiags(0 * gx .* gy, 0, num, num);
+    C = spdiags(eta * gy.^2, 0, num, num) + (k1+k3) * E - (k2+k4) * Op.laplacian;
 
-    % s = eta*diff.*Ix;
-    % t = eta*diff.*Iy;
-    % s = eta*(I(:).*Ix-IJx(:));
-    % t = eta*(I(:).*Iy-IJy(:));
-    s = eta * diff .* (Ix + Jx) / 2;
-    t = eta * diff .* (Iy + Jy) / 2;
+    s = - eta * diff .* gx - k3 * res_x + k4 * Op.laplacian * res_x;
+    t = - eta * diff .* gy - k3 * res_y + k4 * Op.laplacian * res_y;
 
-    ux = solveAXB_SP(A, s);
-    uy = solveAXB_SP(A, t);
+    % M = [A B ; B C];
+    % f = [s ; t];
+    ux = solveAXB_SP(A, s, boundary_pos);
+    uy = solveAXB_SP(C, t, boundary_pos);
+    ux(isnan(ux)) = 0;
+    uy(isnan(uy)) = 0;
+
+    % u = solveAXB_SP(M, f, [boundary_pos;boundary_pos]);
+    % u(isnan(u)) = 0;
+    
+    % ux = u(1:num);
+    % uy = u(num+1:2*num);
 end
-
-% function [ux,uy] = solve_u(I, J, Op, eta, k1,k2)
-% [m,n] = size(I);
-% num = m*n;
-%
-% [Ix,Iy] = gradient(I);
-% [Jx,Jy] = gradient(J);
-% % [IJx,IJy] = gradient(I.*J);
-%
-% Ix = Ix(:); Iy = Iy(:);
-% Jx = Jx(:); Jy = Jy(:);
-% Ixx = Ix.*Ix;
-% Iyy = Iy.*Iy;
-% Ixy = Ix.*Iy;
-% % Ixy_inv = 1./(Ixy+eps);
-%
-% E = speye(num);
-% diff = J(:)-I(:);
-%
-% A = spdiags(eta*Ixx,0,num,num) + k1*E-k2*Op.laplacian;
-% B = spdiags(eta*Ixy,0,num,num);
-% C = B;
-% D = spdiags(eta*Iyy,0,num,num) + k1*E-k2*Op.laplacian;
-% % B_inv = E.*Ixy_inv / eta;
-% % C_inv = B_inv;
-%
-% % s = eta*diff.*Ix;
-% % t = eta*diff.*Iy;
-% % s = eta*(I(:).*Ix-IJx(:));
-% % t = eta*(I(:).*Iy-IJy(:));
-% s = eta*diff.*(Ix+Jx);
-% t = eta*diff.*(Iy+Jy);
-%
-%
-% % left_x = C-D*B_inv*A;
-% % right_x = t - D*B_inv*s;
-% % ux = solveAXB_SP(left_x, right_x);
-% % left_y = B-A*C_inv*D;
-% % right_y = s - A*C_inv*t;
-% % uy = solveAXB_SP(left_y, right_y);
-% r = solveAXB_SP([A,B;C,D],[s;t]);
-% ux = r(1:num);
-% uy = r(num+1:end);
-% end

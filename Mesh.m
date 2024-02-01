@@ -132,13 +132,17 @@ classdef Mesh
             face = delaunay(vert(:, 1), vert(:, 2));
         end
         
-        function [face, vert, outer_face, outer_vert] = rect_mesh_from_disk(disk_face, disk_vert, height, width, density)
+        function [face, vert, outer_face, outer_vert] = rect_mesh_from_disk(disk_face, disk_vert, height, width, density, center_x, center_y)
+            if nargin <= 5
+                center_x = width / 2;
+                center_y = height / 2;
+            end
             circle_point_num = length(disk_vert(abs(Tools.norm(disk_vert) - 1) < 1e-4,:));
             circle_vert = disk_vert(1:circle_point_num, :);
 
             [x,y] = meshgrid(0:width-1, 0:height-1);
-            x = (x - width/2) ./ density;
-            y = (y - height/2) ./ density;
+            x = (x - center_x) ./ density;
+            y = (y - center_y) ./ density;
             % y = y(end:-1:1, :);
             outer_vert = [x(:),y(:)];
             outer_vert = outer_vert(Tools.norm(outer_vert) > 1, :);

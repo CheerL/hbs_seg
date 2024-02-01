@@ -1,19 +1,21 @@
 function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_map, hbs_mu, P)
-
     %% Parameter settings
     seg_display = P.seg_display;
     iteration = P.iteration;
-    u_times = P.u_times;
     gaussian = P.gaussian;
     eta = P.eta;
+    seta = P.seta;
     k1 = P.k1;
     k2 = P.k2;
-    k3 = P.k3;
     alpha = P.alpha;                % similarity with mu_f
     beta = P.beta;                  % similarity with HBS
     delta = P.delta;                % grad of mu
     lambda = P.lambda;              % abs of mu
     upper_bound = P.upper_bound;
+    contour_width = 3;
+    smooth_x_window = 7;
+    smooth_y_window = 7;
+    before_nu = 0;
 
     if isfield(P, 'show_mu')
         show_mu = P.show_mu;
@@ -30,19 +32,11 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
     % Initialize parameters
     warning('off', 'all')
     stopcount = 0;
-    mid = 0.5;
     [m, n] = size(static);
 
     op = Mesh.mesh_operator(face, vert);
     inner_idx = unit_disk >= 0.5;
-    landmark = find(vert(:, 1) == 0 | vert(:, 1) == n - 1 | vert(:, 2) == 0 | vert(:, 2) == m - 1);
-    % landmark = find((vert(:, 1) == 0 & vert(:, 2) == 0) ...
-    %               | (vert(:, 1) == 0 & vert(:, 2) == m-1) ...
-    %               | (vert(:, 1) == n-1 & vert(:, 2) == 0) ...
-    %               | (vert(:, 1) == n-1 & vert(:, 2) == m-1));
-    % landmark = find((vert(:, 1) == round(n/2) & vert(:, 2) == round(m/2)) ...
-    %                |(vert(:, 1) == round(n/2+mesh_density) & vert(:, 2) == round(m/2)));
-    % targets = [0, 0; n-1, 0; 0, m-1; n-1, m-1];
+    landmark = vert(:, 1) == 0 | vert(:, 1) == n - 1 | vert(:, 2) == 0 | vert(:, 2) == m - 1;
 
     global best_loss;
     global best_map;
@@ -53,45 +47,86 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
     end
 
     map = best_map;
-    seg = Tools.move_pixels(unit_disk, vert, map);
-    c1 = mean(static(seg >= mid));
-    c2 = mean(static(seg < mid));
-    seg = c1 * (seg >= mid) + c2 * (seg < mid);
+    hbs_mu = op.f2v * hbs_mu;
+
+    [seg, target_color, background_color] = Tools.move_seg(unit_disk,vert,map,static);
+    % seg = Tools.move_pixels(unit_disk, vert, map);
+    % target_color = mean(static(seg >= mid));
+    % background_color = mean(static(seg < mid));
+    % seg = target_color * (seg >= mid) + background_color * (seg < mid);
     loss_list = [];
 
     f1 = figure;
     set(f1, 'unit', 'normalized', 'position', [0 0 1 1]);
 
     f2 = figure;
+    
+    % center_x = P.unit_disk_center(1);
+    % center_y = P.unit_disk_center(2);
+    % radius = P.unit_disk_radius;
+    % zero_pos = center_x * m + center_y + 1;
+    % one_pos = (center_x+radius) * m + center_y + 1;
+
+    % pts_num = 50;
+    % pts_theta = 2*pi / pts_num * 1:pts_num;
+    % pts = [center_x + radius * cos(pts_theta'), center_y + radius * sin(pts_theta')];
+    % 
+    % big_x = pts(:, 1) > center_x;
+    % big_y = pts(:, 2) > center_y;
+    % pts(big_x, 1) = floor(pts(big_x, 1));
+    % pts(big_y, 2) = floor(pts(big_y, 2));
+    % pts(~big_x, 1) = ceil(pts(~big_x, 1));
+    % pts(~big_y, 2) = ceil(pts(~big_y, 2));
+    % pts_idx = pts(:,1)*m + pts(:, 2)+1;
+    % 
+    % pts_idx = unique(pts_idx);
+
+
+
     % iterations
     for k = 1:iteration
         % Compute modified demon descent and update the registration function (mu-subproblem)
-        [temp_map, temp_seg] = compute_u(static, seg, vert, vert, op, u_times, gaussian, eta, k1, k2, k3, c1, c2);
-        Fx = scatteredInterpolant(vert, temp_map(:, 1));
-        Fy = scatteredInterpolant(vert, temp_map(:, 2));
-        temp_map = [Fx(map), Fy(map)];
-        % temp_seg = Tools.move_pixels(unit_disk,vert,temp_map);
-        % [u,map,seg] = compute_u(static,moving,vert,map,op,times,gaussian,eta,k1,k2,c1,c2);
+        temp_map = map;
+        temp_seg = seg;
+        for kk = 1:P.u_times
+        
+        u = compute_u( ...
+            static, temp_seg, unit_disk, vert, temp_map, landmark, ...
+            op, gaussian, eta, k1, k2, target_color, background_color ...
+        );
+        temp_map_x_intp = scatteredInterpolant(u, vert(:,1));
+        temp_map_y_intp = scatteredInterpolant(u, vert(:,2));
+        temp_map = [temp_map_x_intp(temp_map),temp_map_y_intp(temp_map)];
+        temp_seg = Tools.move_seg(unit_disk,vert,temp_map,static);
+        end
+        % temp_f_map_intp_x = scatteredInterpolant(temp_map, vert(:, 1));
+        % temp_f_map_intp_y = scatteredInterpolant(temp_map, vert(:, 2));
+        % temp_f_map = [temp_f_map_intp_x(vert), temp_f_map_intp_y(vert)];
+        
 
-        temp_mu = bc_metric(face, vert, temp_map, 2);
+        % temp_mu = bc_metric(face, vert, temp_map, 2);
+        [gx_temp_map, gy_temp_map] = gradient(reshape(Tools.real2complex(temp_map),m,n));
+        temp_mu = (gx_temp_map + 1i * gy_temp_map) ./ (gx_temp_map - 1i * gy_temp_map + 1e-10);
         temp_mu = Tools.mu_chop(temp_mu, upper_bound);
-        smooth_mu = smoothing(temp_mu, hbs_mu, op, inner_idx, alpha, beta, lambda, delta);
+        if k < 5
+            smooth_mu = smoothing(temp_mu, hbs_mu, op, inner_idx, alpha, beta, lambda, delta,0);
+        else
+            smooth_mu = smoothing(temp_mu, hbs_mu, op, inner_idx, alpha, beta, lambda, delta,seta);
+        end
         smooth_mu = Tools.mu_chop(smooth_mu, upper_bound);
-        map = lsqc_solver(face, vert, smooth_mu, landmark, init_map(landmark, :));
-        % map = lsqc_solver(face, vert, smooth_mu, landmark, targets);
-        seg = Tools.move_pixels(unit_disk, vert, map);
+        map = lsqc_solver(face, vert, op.v2f * smooth_mu, find(landmark), init_map(landmark, :));
+        % map = lsqc_solver(face, vert, op.v2f * smooth_mu, [zero_pos;one_pos], temp_map([zero_pos;one_pos], :));
+        
+        % map_intp_x = scatteredInterpolant(f_map, vert(:, 1));
+        % map_intp_y = scatteredInterpolant(f_map, vert(:, 2));
+        % map = [map_intp_x(vert), map_intp_y(vert)];
 
-        c1_old = c1;
-        c2_old = c2;
+        target_color_old = target_color;
+        background_color_old = background_color;
+        % [seg, target_color, background_color] = Tools.move_seg_inv(unit_disk,vert,map,static);
+        [seg, target_color, background_color] = Tools.move_seg(unit_disk,vert,map,static);
 
-        mid = (c1 + c2) / 2;
-        tg = seg >= mid;
-        bg = seg < mid;
-        c1 = mean(static(tg));
-        c2 = mean(static(bg));
-        seg = c1 * tg + c2 * bg;
-
-        if ((abs(c1 - c1_old) < 1e-4) && (abs(c2 - c2_old) < 1e-4))
+        if ((abs(target_color - target_color_old) < 1e-4) && (abs(background_color - background_color_old) < 1e-4))
             stopcount = stopcount + 1;
         else
             stopcount = 0;
@@ -101,14 +136,14 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
         loss = norm(static - seg, 'fro');
         loss_list = cat(2, loss_list, loss);
         info_fmt = 'Interation %i of %s \n C1: %.4f -> %.4f, C2: %.4f -> %.4f\n loss: %.3f, stopcount %i\n';
-        info = sprintf(info_fmt, k, P.config_name, c1_old, c1, c2_old, c2, loss, stopcount);
+        info = sprintf(info_fmt, k, P.config_name, target_color_old, target_color, background_color_old, background_color, loss, stopcount);
         fprintf(info);
 
         if loss < best_loss
             best_loss = loss;
             best_map = map;
         end
-
+        
         if mod(k, 1) == 0
             if seg_display ~= "none"
                 figure(f1);
@@ -119,30 +154,34 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                 axis square;
 
                 sp2 = subplot(2, 3, 2);
-                imshow(seg);
-                % imshow(temp_seg)
+                % imshow(seg);
+                imshow(temp_seg);   
+                hold off;
+                
                 xlabel(info);
 
                 sp3 = subplot(2, 3, 3);
                 % imshow(abs(static - seg));
                 imshow(show_static);
                 hold on;
-                contour(seg, 1, 'EdgeColor', 'g', 'LineWidth', 1);
-                contour(temp_seg, 1, 'EdgeColor', 'r', 'LineWidth', 1);
+                contour(seg, 1, 'EdgeColor', 'r', 'LineWidth', 1);
+                contour(temp_seg, 1, 'EdgeColor', 'g', 'LineWidth', 1);
                 hold off;
 
                 sp4 = subplot(2, 3, 4);
                 imshow(seg);
                 hold on;
-                Plot.pri_scatter(map + [1, 1], 2);
+                Plot.pri_scatter(map(unit_disk == 1, :) + [1, 1], 2);
+                Plot.pri_scatter(map(unit_disk == 0, :) + [1, 1], 2);
                 hold off;
 
                 if show_mu
                     subplot(2, 3, 5);
-                    Plot.pri_plot_mu(temp_mu, face, vert);
+                    Plot.pri_plot_mu(op.v2f * temp_mu(:), face, vert);
                     subplot(2, 3, 6);
-                    Plot.pri_plot_mu(smooth_mu, face, vert);
+                    Plot.pri_plot_mu(op.v2f * smooth_mu(:), face, vert);
                 end
+                
 
                 colormap(sp1, 'gray');
                 colormap(sp2, 'gray');
@@ -154,7 +193,12 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                     figure(f2);
                     imshow(show_static);
                     hold on;
-                    contour(temp_seg, 1, 'EdgeColor', 'g', 'LineWidth', 1);
+                    if (before_nu || P.beta == 0)
+                    Plot.pri_smooth_contour(temp_seg,smooth_x_window,smooth_y_window,'g',contour_width);
+                    else
+                    Plot.pri_smooth_contour(seg,smooth_x_window,smooth_y_window,'g',contour_width);
+                    end
+                    % contour(seg, 1, 'EdgeColor', 'g', 'LineWidth', contour_width);
                     hold off;
 
                     result_path = seg_display;
@@ -166,7 +210,7 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                     if ~exist(iter_result_dir, 'dir')
                         mkdir(iter_result_dir);
                     end
-                    
+
                     iter_result_path = join([iter_result_dir, result_filename], '/');
                     iter_result_path = replace(iter_result_path, '.png', ['_', num2str(k), '.png']);
                     iter_result_seg_path = replace(iter_result_path, '.png', '.seg.png');
@@ -179,6 +223,8 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                     if loss <= best_loss
                         best_result_path = replace(result_path, '.png', '.best.png');
                         best_result_seg_path = replace(result_seg_path, '.png', '.best.png');
+                        % saveas(f1, best_result_path);
+                        % saveas(f2, best_result_seg_path);
                         copyfile(result_path, best_result_path);
                         copyfile(result_seg_path, best_result_seg_path);
                     end
@@ -193,7 +239,8 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
             if seg_display ~= "none"
                 Plot.imshow(show_static);
                 hold on;
-                contour(seg, 1, 'EdgeColor', 'g', 'LineWidth', 1);
+                Plot.pri_smooth_contour(temp_seg,smooth_x_window,smooth_y_window,'g',contour_width);
+                % contour(temp_seg, 1, 'EdgeColor', 'g', 'LineWidth', contour_width);
                 hold off;
                 drawnow;
 

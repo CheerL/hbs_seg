@@ -183,11 +183,16 @@ classdef Plot
 
         function pri_plot_map(map, vert)
             scatter3(vert(:, 1), vert(:, 2), abs(map), 10, abs(map), 'filled');
-                        axis([0 1 0 1 0 0.01]);
-                        view([0 90]);
+%                         axis([0 1 0 1 0 0.01]);
+%                         view([0 90]);
                         % axis equal
             colormap jet;
             % box on;
+        end
+        
+        function pri_smooth_contour(image, x_window, y_window,color,line_width)
+            smooth_image = smoothdata(smoothdata(image,1,'movmean',x_window),2,'movmean',y_window);
+            contour(smooth_image,1,'EdgeColor',color,'LineWidth',line_width);
         end
     end
 

@@ -261,6 +261,49 @@ classdef Tools
             idx = find(abs_mu>=bound);
             mu(idx) = constant*(mu(idx)./abs_mu(idx));
         end
+
+        function [seg, high_color, low_color] = move_seg(moving, xy, target_xy, arg1, arg2)
+            new_moving = Tools.move_pixels(moving, xy, target_xy);
+            
+            mid = mean(new_moving, "all");
+            high_part = new_moving >= mid;
+            low_part = new_moving < mid;
+
+            if nargin == 4
+                static = arg1;
+                high_color = mean(static(high_part));
+                low_color = mean(static(low_part));
+                
+            else
+                high_color = arg1;
+                low_color = arg2;
+            end
+            
+            seg = high_color * high_part + low_color * low_part;
+        end
+        
+        function [seg, high_color, low_color] = move_seg_inv(moving, xy, target_xy, arg1, arg2)
+%             new_moving = Tools.move_pixels(moving, target_xy, xy);
+            [m,n] = size(moving);
+            moving_intp = scatteredInterpolant(xy, moving(:));
+            new_moving = reshape(moving_intp(target_xy), m,n);
+            mid = mean(new_moving, "all");
+            high_part = new_moving >= mid;
+            low_part = new_moving < mid;
+
+            if nargin == 4
+                static = arg1;
+                high_color = mean(static(high_part));
+                low_color = mean(static(low_part));
+                
+            else
+                high_color = arg1;
+                low_color = arg2;
+            end
+            
+            seg = high_color * high_part + low_color * low_part;
+        end
+        
     end
 end
 

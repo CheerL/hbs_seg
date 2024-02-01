@@ -62,7 +62,7 @@ l = [sqrt(sum((v(:,f(2,:)) - v(:,f(3,:))).^2,1));
 f1 = f(1,:); f2 = f(2,:); f3 = f(3,:);
 l1 = l(1,:); l2 = l(2,:); l3 = l(3,:);
 s = (l1 + l2 + l3)*0.5;
-area = 2*sqrt( s.*(s-l1).*(s-l2).*(s-l3));
+area = sqrt( s.*(s-l1).*(s-l2).*(s-l3));
 area(area<1e-5)=1e-5;
 cot12 = (l1.^2 + l2.^2 - l3.^2)./area/4;
 cot23 = (l2.^2 + l3.^2 - l1.^2)./area/4; 
@@ -71,7 +71,18 @@ diag1 = -cot12-cot31; diag2 = -cot12-cot23; diag3 = -cot31-cot23;
 II = [f1 f2 f2 f3 f3 f1 f1 f2 f3];
 JJ = [f2 f1 f3 f2 f1 f3 f1 f2 f3];
 V = [cot12' cot12' cot23' cot23' cot31' cot31' diag1' diag2' diag3'];
-L = sparse(II,JJ,V,size(v,2),size(v,2));
+cot = sparse(II,JJ,V,size(v,2),size(v,2));
+
+% face_num = size(f,2);
+% vertex_num = size(v,2);
+% face_idx = repmat((1:face_num),3,1);
+% vf_matrix = sparse(f(:),face_idx(:), ones(1, 3*face_num), vertex_num, face_num);
+% v_area = vf_matrix * area' / 3;
+% v_area_matrix = spdiags(0.5 ./v_area, 0, vertex_num, vertex_num);
+% 
+% L = v_area_matrix * cot;
+L = cot / 2;
+
 end
 
 
