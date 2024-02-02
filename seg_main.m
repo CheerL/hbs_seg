@@ -12,10 +12,10 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
     delta = P.delta;                % grad of mu
     lambda = P.lambda;              % abs of mu
     upper_bound = P.upper_bound;
-    contour_width = 3;
-    smooth_x_window = 7;
-    smooth_y_window = 7;
-    before_nu = 0;
+    contour_width = P.contour_width;
+    smooth_x_window = P.smooth_window(1);
+    smooth_y_window = P.smooth_window(2);
+    before_nu = P.force_before_nu;
 
     if isfield(P, 'show_mu')
         show_mu = P.show_mu;
@@ -60,28 +60,6 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
     set(f1, 'unit', 'normalized', 'position', [0 0 1 1]);
 
     f2 = figure;
-    
-    % center_x = P.unit_disk_center(1);
-    % center_y = P.unit_disk_center(2);
-    % radius = P.unit_disk_radius;
-    % zero_pos = center_x * m + center_y + 1;
-    % one_pos = (center_x+radius) * m + center_y + 1;
-
-    % pts_num = 50;
-    % pts_theta = 2*pi / pts_num * 1:pts_num;
-    % pts = [center_x + radius * cos(pts_theta'), center_y + radius * sin(pts_theta')];
-    % 
-    % big_x = pts(:, 1) > center_x;
-    % big_y = pts(:, 2) > center_y;
-    % pts(big_x, 1) = floor(pts(big_x, 1));
-    % pts(big_y, 2) = floor(pts(big_y, 2));
-    % pts(~big_x, 1) = ceil(pts(~big_x, 1));
-    % pts(~big_y, 2) = ceil(pts(~big_y, 2));
-    % pts_idx = pts(:,1)*m + pts(:, 2)+1;
-    % 
-    % pts_idx = unique(pts_idx);
-
-
 
     % iterations
     for k = 1:iteration
@@ -102,7 +80,6 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
         % temp_f_map_intp_x = scatteredInterpolant(temp_map, vert(:, 1));
         % temp_f_map_intp_y = scatteredInterpolant(temp_map, vert(:, 2));
         % temp_f_map = [temp_f_map_intp_x(vert), temp_f_map_intp_y(vert)];
-        
 
         % temp_mu = bc_metric(face, vert, temp_map, 2);
         [gx_temp_map, gy_temp_map] = gradient(reshape(Tools.real2complex(temp_map),m,n));
@@ -148,20 +125,17 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
             if seg_display ~= "none"
                 figure(f1);
                 sp1 = subplot(2, 3, 1);
-                % imshow(temp_seg);
                 colormap("gray");
                 plot(loss_list);
                 axis square;
 
                 sp2 = subplot(2, 3, 2);
-                % imshow(seg);
                 imshow(temp_seg);   
                 hold off;
                 
                 xlabel(info);
 
                 sp3 = subplot(2, 3, 3);
-                % imshow(abs(static - seg));
                 imshow(show_static);
                 hold on;
                 contour(seg, 1, 'EdgeColor', 'r', 'LineWidth', 1);
@@ -198,7 +172,6 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                     else
                     Plot.pri_smooth_contour(seg,smooth_x_window,smooth_y_window,'g',contour_width);
                     end
-                    % contour(seg, 1, 'EdgeColor', 'g', 'LineWidth', contour_width);
                     hold off;
 
                     result_path = seg_display;
