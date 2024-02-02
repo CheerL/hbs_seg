@@ -17,6 +17,12 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
     smooth_y_window = P.smooth_window(2);
     before_nu = P.force_before_nu;
 
+    if isfield(P, 'compare')
+        compare = double(imresize(Mesh.imread(P.compare), [256,256]));
+    else
+        compare = static;
+    end
+
     if isfield(P, 'show_mu')
         show_mu = P.show_mu;
     else
@@ -25,6 +31,7 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
 
     if isfield(P, 'reverse_image') && P.reverse_image
         show_static = 1 - static;
+        compare = 1 - compare;
     else
         show_static = static;
     end
@@ -110,7 +117,7 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
         end
 
         % Display intermediate results
-        loss = norm(static - seg, 'fro');
+        loss = norm(compare - seg, 'fro');
         loss_list = cat(2, loss_list, loss);
         info_fmt = 'Interation %i of %s \n C1: %.4f -> %.4f, C2: %.4f -> %.4f\n loss: %.3f, stopcount %i\n';
         info = sprintf(info_fmt, k, P.config_name, target_color_old, target_color, background_color_old, background_color, loss, stopcount);
