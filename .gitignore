@@ -8,3 +8,5 @@ run_instance*.m
 run.py
 config
 vars
+*.pyc
+*.db

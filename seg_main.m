@@ -117,16 +117,18 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
         end
 
         % Display intermediate results
-        loss = norm(compare - seg, 'fro');
+        mid = (target_color + background_color) / 2;
+        loss = norm((compare > mid) - (seg > mid), 'fro');
         loss_list = cat(2, loss_list, loss);
-        info_fmt = 'Interation %i of %s \n C1: %.4f -> %.4f, C2: %.4f -> %.4f\n loss: %.3f, stopcount %i\n';
-        info = sprintf(info_fmt, k, P.config_name, target_color_old, target_color, background_color_old, background_color, loss, stopcount);
-        fprintf(info);
-
         if loss < best_loss
             best_loss = loss;
             best_map = map;
         end
+
+        info_fmt = 'Interation %i of %s \n C1: %.4f -> %.4f, C2: %.4f -> %.4f\n loss: %.3f / %.3f, stopcount %i\n';
+        info = sprintf(info_fmt, k, P.config_name, target_color_old, target_color, background_color_old, background_color, loss, best_loss, stopcount);
+        fprintf(info);
+
         
         if mod(k, 1) == 0
             if seg_display ~= "none"
