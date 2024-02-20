@@ -118,7 +118,11 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
 
         % Display intermediate results
         mid = (target_color + background_color) / 2;
-        loss = norm((compare > mid) - (seg > mid), 'fro');
+        if target_color > background_color
+            loss = norm((compare > mid) - (seg > mid), 'fro');
+        else
+            loss = norm((compare > mid) - (seg < mid), 'fro');
+        end
         loss_list = cat(2, loss_list, loss);
         if loss < best_loss
             best_loss = loss;

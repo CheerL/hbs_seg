@@ -9,12 +9,12 @@ m = 256;
 n = 256;
 bound_point_num = 500;
 circle_point_num = 1000;
-hbs_mesh_density = 50;
+hbs_mesh_density = 60;
 smooth_eps = 5e-3;
 mu_upper_bound = 0.9999;
-input_dir = 'img/hbs_seg/brains/bt/';
-mean_img_path = 'img/hbs_seg/output/mean_bt.png';
-mean_hbs_path = 'vars/mean_bt.mat';
+input_dir = 'img/hbs_seg/brains/type2/';
+mean_img_path = 'img/hbs_seg/mean_brain.png';
+mean_hbs_path = 'img/hbs_seg/mean_brain.mat';
 
 
 [face, vert] = Mesh.rect_mesh(m, n, 0);
@@ -24,7 +24,7 @@ unit_disk = zeros(m, n);
 unit_disk(Tools.norm(normal_vert) <= (1 + smooth_eps)) = 1;
 
 start_num = 1;
-num = 10;
+num = 7;
 hbs_cell = cell(num, 1);
 hbs_mu_cell = cell(num, 1);
 reconstructed_cell = cell(num, 1);
@@ -32,7 +32,7 @@ map_cell = cell(num, 1);
 
 for i=start_num:start_num+num-1
 static_path = [input_dir, num2str(i), '.png'];
-img_path = [input_dir, num2str(i), '.m.png'];
+img_path = [input_dir, num2str(i), 'm.png'];
 
 if ~isfile(static_path) || ~isfile(img_path)
     continue
