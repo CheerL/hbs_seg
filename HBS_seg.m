@@ -39,13 +39,8 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
         show_static = static;
     end
 
-    [m, n] = size(static);
-    [face, vert] = Mesh.rect_mesh(m, n, 0);
-    % init_map = vert;
     mesh_density = hbs_mesh_density;
-    normal_vert = (vert - center) ./ mesh_density;
-    unit_disk = zeros(m, n);
-    unit_disk(Tools.norm(normal_vert) <= (1 + smooth_eps)) = 1;
+    [m, n] = size(static);
 
 
     %% Compute HBS and initial map
@@ -58,17 +53,28 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
         [disk_face, disk_vert] = Mesh.unit_disk_mesh(hbs_mesh_density, circle_interval);
     end
     
-    [reconstructed_bound, inner, outer, extend_vert, ~] = HBS_reconstruct(hbs, disk_face, disk_vert, m, n, mesh_density, center_x, center_y);
-    extend_map = Tools.complex2real([reconstructed_bound; inner; outer]);
+    [reconstructed_bound, inner, outer, normal_vert, face] = HBS_reconstruct(hbs, disk_face, disk_vert, m, n, mesh_density, center_x, center_y);
+    vert = normal_vert .* mesh_density + center;
+    hbs_map = Tools.complex2real([reconstructed_bound; inner; outer]);
+    hbs_map = hbs_map .* mesh_density + center;
 
-    interp_map_x = scatteredInterpolant(extend_vert, extend_map(:, 1));
-    interp_map_y = scatteredInterpolant(extend_vert, extend_map(:, 2));
-    normal_map = [interp_map_x(normal_vert), interp_map_y(normal_vert)];
-    hbs_map = normal_map .* mesh_density + center;
+    % interp_map_x = scatteredInterpolant(extend_vert, extend_map(:, 1));
+    % interp_map_y = scatteredInterpolant(extend_vert, extend_map(:, 2));
+    % normal_map = [interp_map_x(normal_vert), interp_map_y(normal_vert)];
+    % hbs_map = normal_map .* mesh_density + center;
+    % hbs_mu = bc_metric(face, vert, hbs_map, 2);
+    % hbs_mu = Tools.mu_chop(hbs_mu, mu_upper_bound);
     hbs_mu = bc_metric(face, vert, hbs_map, 2);
     hbs_mu = Tools.mu_chop(hbs_mu, mu_upper_bound);
-    reconstructed_bound = Tools.complex2real(reconstructed_bound) .* mesh_density + center;
+    reconstructed_bound = hbs_map(1:circle_point_num, :);
     % init_moving = double(Tools.move_pixels(unit_disk, vert, map) >= 0.5);
+
+    [rface, rvert] = Mesh.rect_mesh(m, n, 0);
+    % init_map = vert;
+    
+    % normal_vert = (vert - center) ./ mesh_density;
+    unit_disk = zeros(size(vert, 1), 1);
+    unit_disk(Tools.norm(normal_vert) <= (1 + smooth_eps)) = 1;
     init_moving = unit_disk;
 
     % Display init_moving, map and mu
@@ -77,7 +83,7 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
         sp1 = subplot(1, 3, 1);
         imshow(show_static);
         sp2 = subplot(1, 3, 2);
-        imshow(init_moving)
+        imshow(Tools.irregular2image(init_moving, vert, rvert, m, n));
         hold on;
         Plot.pri_scatter(reconstructed_bound+[1,1]);
         % plot(real(reconstructed_bound), imag(reconstructed_bound), 'g','LineWidth',1);
@@ -111,18 +117,19 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
     end
     updated_map = Tools.complex2real(Tools.real2complex(hbs_map - center)*scaling * exp(1i * rotation))+[a,b]+center;
     updated_moving = Tools.move_pixels(unit_disk,vert,updated_map);
+    updated_moving_image = Tools.irregular2image(updated_moving, vert, rvert, m, n);
 
     if recounstruced_bound_display ~= "none"
         figure;
         subplot(1, 3, 1)
         imshow(show_static);
         subplot(1, 3, 2);
-        imshow(updated_moving);
+        imshow(updated_moving_image);
         subplot(1, 3, 3);
         imshow(show_static);
         hold on;
         center_pos = updated_map(center_x * n + center_y + 1, :) + [1, 1];
-        contour(updated_moving, 1, 'EdgeColor', 'g', 'LineWidth', 1);
+        contour(updated_moving_image, 1, 'EdgeColor', 'g', 'LineWidth', 1);
         Plot.pri_scatter(center_pos);
         hold off;
 
@@ -144,7 +151,7 @@ function [map, mu, seg, moving] = HBS_seg(static, moving, P)
     %% Compute the object boundary (Main Program)
 
     % 1st time computation
-    [map, mu, seg] = seg_main(static, unit_disk, face, vert, updated_map, hbs_mu, P);
+    [map, mu, seg] = seg_main(static, unit_disk, face, vert, rvert, updated_map, hbs_mu, P);
 end
 
 function [scaling, rotation, a, b] = get_transformation_params(static, moving, params)

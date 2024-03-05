@@ -249,6 +249,31 @@ classdef Tools
             J = reshape(J,size(I));
         end
 
+        function J = move_pixels_irregular(I, xy, target_xy, grid)
+            % move pixels of input data according to transformation of
+            % coordinate. I is not required to be regular rectangle.
+            % INPUT:
+            %   I: n x 1, input data
+            %   xy: n x 2, original coordinate
+            %   target_xy: n x 2, target coordinate
+            if nargin == 4
+                Fx = scatteredInterpolant(xy,target_xy(:,1));
+                Fy = scatteredInterpolant(xy,target_xy(:,2));
+                target_grid = [Fx(grid),Fy(grid)];
+            elseif nargin == 3
+                grid = xy;
+                target_grid = target_xy;
+            end
+
+            G = scatteredInterpolant(target_grid, I);
+            J = G(grid);
+        end
+
+        function I = irregular2image(data, irxy, xy, m, n)
+            F = scatteredInterpolant(irxy, data);
+            I = reshape(F(xy), m, n);
+        end
+
         function mu = mu_chop(mu,bound,constant)
             if nargin == 1
                 bound = 0.9999;
@@ -283,7 +308,7 @@ classdef Tools
         end
         
         function [seg, high_color, low_color] = move_seg_inv(moving, xy, target_xy, arg1, arg2)
-%             new_moving = Tools.move_pixels(moving, target_xy, xy);
+            % new_moving = Tools.move_pixels(moving, target_xy, xy);
             [m,n] = size(moving);
             moving_intp = scatteredInterpolant(xy, moving(:));
             new_moving = reshape(moving_intp(target_xy), m,n);

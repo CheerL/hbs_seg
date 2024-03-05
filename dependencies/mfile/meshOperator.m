@@ -26,7 +26,10 @@ Operator.f2v = F2V(v,f);
 Operator.v2f = V2F(v,f);
 Operator.laplacian = laplacebeltrami(v,f);
 Operator.Diff = diff_operator(v,f);
-
+Operator.Diff.Dxv = Operator.f2v * Operator.Diff.Dx;
+Operator.Diff.Dyv = Operator.f2v * Operator.Diff.Dy;
+Operator.Diff.Dzv = Operator.f2v * Operator.Diff.Dz;
+Operator.double_laplacian = Operator.laplacian * Operator.laplacian;
 end
 
 

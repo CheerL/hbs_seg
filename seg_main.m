@@ -1,4 +1,4 @@
-function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_map, hbs_mu, P)
+function [map, smooth_mu, seg] = seg_main(rstatic, unit_disk, face, vert, rvert, init_map, hbs_mu, P)
     %% Parameter settings
     seg_display = P.seg_display;
     iteration = P.iteration;
@@ -17,9 +17,14 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
     smooth_y_window = P.smooth_window(2);
     before_nu = P.force_before_nu;
 
+    [m, n] = size(rstatic);
+    static = Tools.irregular2image(rstatic(:), rvert, vert, size(vert, 1), 1);
+
     if isfield(P, 'compare')
-        compare = double(imresize(Mesh.imread(P.compare), [256,256]));
+        rcompare = double(imresize(Mesh.imread(P.compare), [m,n]));
+        compare = Tools.irregular2image(rcompare(:), rvert, vert, size(vert, 1), 1);
     else
+        rcompare = rstatic;
         compare = static;
     end
 
@@ -30,16 +35,18 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
     end
 
     if isfield(P, 'reverse_image') && P.reverse_image
-        show_static = 1 - static;
+        show_static = 1 - rstatic;
+        show_compare = 1 - rcompare;
         compare = 1 - compare;
     else
-        show_static = static;
+        show_static = rstatic;
+        show_compare = rcompare;
     end
 
     % Initialize parameters
     warning('off', 'all')
     stopcount = 0;
-    [m, n] = size(static);
+    
 
     op = Mesh.mesh_operator(face, vert);
     inner_idx = unit_disk >= 0.5;
@@ -54,7 +61,7 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
     end
 
     map = best_map;
-    hbs_mu = op.f2v * hbs_mu;
+    % hbs_mu = op.f2v * hbs_mu;
 
     [seg, target_color, background_color] = Tools.move_seg(unit_disk,vert,map,static);
     % seg = Tools.move_pixels(unit_disk, vert, map);
@@ -88,17 +95,19 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
         % temp_f_map_intp_y = scatteredInterpolant(temp_map, vert(:, 2));
         % temp_f_map = [temp_f_map_intp_x(vert), temp_f_map_intp_y(vert)];
 
-        % temp_mu = bc_metric(face, vert, temp_map, 2);
-        [gx_temp_map, gy_temp_map] = gradient(reshape(Tools.real2complex(temp_map),m,n));
-        temp_mu = (gx_temp_map + 1i * gy_temp_map) ./ (gx_temp_map - 1i * gy_temp_map + 1e-10);
+        temp_mu = bc_metric(face, vert, temp_map, 2);
+        % [gx_temp_map, gy_temp_map] = gradient(reshape(Tools.real2complex(temp_map),m,n));
+        % temp_mu = (gx_temp_map + 1i * gy_temp_map) ./ (gx_temp_map - 1i * gy_temp_map + 1e-10);
         temp_mu = Tools.mu_chop(temp_mu, upper_bound);
         if k < 5
-            smooth_mu = smoothing(temp_mu, hbs_mu, op, inner_idx, alpha, beta, lambda, delta,0);
+            smooth_mu = smoothing(temp_mu, hbs_mu, op, inner_idx, alpha, beta, lambda, delta,0, m, n);
         else
-            smooth_mu = smoothing(temp_mu, hbs_mu, op, inner_idx, alpha, beta, lambda, delta,seta);
+            smooth_mu = smoothing(temp_mu, hbs_mu, op, inner_idx, alpha, beta, lambda, delta,seta, m, n);
         end
         smooth_mu = Tools.mu_chop(smooth_mu, upper_bound);
-        map = lsqc_solver(face, vert, op.v2f * smooth_mu, find(landmark), init_map(landmark, :));
+        % smooth_mu = temp_mu;
+        map = lsqc_solver(face, vert, smooth_mu, find(landmark), init_map(landmark, :));
+        % map = lsqc_solver(face, vert, op.v2f * temp_mu(:), find(landmark), init_map(landmark, :));
         % map = lsqc_solver(face, vert, op.v2f * smooth_mu, [zero_pos;one_pos], temp_map([zero_pos;one_pos], :));
         
         % map_intp_x = scatteredInterpolant(f_map, vert(:, 1));
@@ -135,6 +144,8 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
 
         
         if mod(k, 1) == 0
+            temp_seg_image = Tools.irregular2image(temp_seg,vert,rvert,m,n);
+            seg_image = Tools.irregular2image(seg,vert,rvert,m,n);
             if seg_display ~= "none"
                 figure(f1);
                 sp1 = subplot(2, 3, 1);
@@ -143,7 +154,7 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                 axis square;
 
                 sp2 = subplot(2, 3, 2);
-                imshow(temp_seg);   
+                imshow(temp_seg_image);   
                 hold off;
                 
                 xlabel(info);
@@ -151,12 +162,12 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                 sp3 = subplot(2, 3, 3);
                 imshow(show_static);
                 hold on;
-                contour(seg, 1, 'EdgeColor', 'r', 'LineWidth', 1);
-                contour(temp_seg, 1, 'EdgeColor', 'g', 'LineWidth', 1);
+                contour(seg_image, 1, 'EdgeColor', 'r', 'LineWidth', 1);
+                contour(temp_seg_image, 1, 'EdgeColor', 'g', 'LineWidth', 1);
                 hold off;
 
                 sp4 = subplot(2, 3, 4);
-                imshow(seg);
+                imshow(seg_image);
                 hold on;
                 Plot.pri_scatter(map(unit_disk == 1, :) + [1, 1], 2);
                 Plot.pri_scatter(map(unit_disk == 0, :) + [1, 1], 2);
@@ -164,9 +175,11 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
 
                 if show_mu
                     subplot(2, 3, 5);
-                    Plot.pri_plot_mu(op.v2f * temp_mu(:), face, vert);
+                    % Plot.pri_plot_mu(op.v2f * temp_mu(:), face, vert);
+                    Plot.pri_plot_mu(temp_mu, face, vert);
                     subplot(2, 3, 6);
-                    Plot.pri_plot_mu(op.v2f * smooth_mu(:), face, vert);
+                    Plot.pri_plot_mu(smooth_mu, face, vert);
+                    % Plot.pri_plot_mu(op.v2f * smooth_mu(:), face, vert);
                 end
                 
 
@@ -181,9 +194,9 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
                     imshow(show_static);
                     hold on;
                     if (before_nu || P.beta == 0)
-                    Plot.pri_smooth_contour(temp_seg,smooth_x_window,smooth_y_window,'g',contour_width);
+                    Plot.pri_smooth_contour(temp_seg_image,smooth_x_window,smooth_y_window,'g',contour_width);
                     else
-                    Plot.pri_smooth_contour(seg,smooth_x_window,smooth_y_window,'g',contour_width);
+                    Plot.pri_smooth_contour(seg_image,smooth_x_window,smooth_y_window,'g',contour_width);
                     end
                     hold off;
 
@@ -225,7 +238,7 @@ function [map, smooth_mu, seg] = seg_main(static, unit_disk, face, vert, init_ma
             if seg_display ~= "none"
                 Plot.imshow(show_static);
                 hold on;
-                Plot.pri_smooth_contour(temp_seg,smooth_x_window,smooth_y_window,'g',contour_width);
+                Plot.pri_smooth_contour(temp_seg_image,smooth_x_window,smooth_y_window,'g',contour_width);
                 % contour(temp_seg, 1, 'EdgeColor', 'g', 'LineWidth', contour_width);
                 hold off;
                 drawnow;
