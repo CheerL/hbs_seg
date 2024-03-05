@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_file
 from flask_sqlalchemy import SQLAlchemy
 import json
 from flask_cors import CORS
@@ -10,6 +10,7 @@ app = Flask(__name__)
 CORS(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///data.db'  # SQLite3 database
 db = SQLAlchemy(app)
+img_dir = '../img/hbs_seg/output'
 
 # Define a model for your table
 class MyTable(db.Model):
@@ -170,6 +171,14 @@ def run_data():
         else:
             return jsonify({'message': 'Data not found'}), 404
 
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/image/<path>/<name>', methods=['GET'])
+def get_image(path, name):
+    try:
+        image_path = f'{img_dir}/config_{path}/{name}'
+        return send_file(image_path, mimetype='image/png')
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
